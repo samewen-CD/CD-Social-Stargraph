@@ -437,12 +437,16 @@ function drawNode(n, idx) {
   const key  = n.name.replace('\n',' ');
   const img  = imgCache[key];
 
-  // Glow halo
-  const grd = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*2.5);
-  grd.addColorStop(0, n.cat.glow.replace('0.4', hov?'0.6':'0.25'));
+  // Glow halo — tighter radius to prevent bleed into neighbours
+  const grd = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*1.7);
+  grd.addColorStop(0, n.cat.glow.replace('0.4', hov?'0.55':'0.18'));
   grd.addColorStop(1,'transparent');
-  ctx.beginPath(); ctx.arc(n.x,n.y,r*2.5,0,Math.PI*2);
+  ctx.beginPath(); ctx.arc(n.x,n.y,r*1.7,0,Math.PI*2);
   ctx.fillStyle=grd; ctx.fill();
+
+  // Solid black backdrop so nodes fully occlude one another
+  ctx.beginPath(); ctx.arc(n.x,n.y,r+1,0,Math.PI*2);
+  ctx.fillStyle='#000'; ctx.fill();
 
   // Circle
   ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
@@ -559,7 +563,8 @@ const WORKER_URL = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
 const tweetCache = {};        // handle → tweet object
 let   tweetQueue  = [];       // nodeState indices waiting to show card
 let   activeCards = new Set();// indices currently showing a card
-const MAX_CARDS      = 3;             // max simultaneous cards
+const activeCardPositions = new Map(); // nodeIdx → {x, y}
+const MAX_CARDS      = 2;             // max simultaneous cards
 const CARD_DUR       = 7;             // seconds each card stays visible
 const FETCH_INTERVAL = 5 * 60 * 1000; // refresh every 5 min
 const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000; // 5 hours in ms
@@ -609,7 +614,20 @@ function showTweetCard(nodeIdx) {
   if (!tweet) return;
   if ((Date.now() - new Date(tweet.created).getTime()) >= MAX_TWEET_AGE) return;
 
+  // Check spatial conflict with existing cards (min 280px apart)
+  const cardX = n.x + (n.x > cx ? -248 : 8);
+  const cardY = n.y - 60;
+  for (const [, pos] of activeCardPositions) {
+    const dx = cardX - pos.x, dy = cardY - pos.y;
+    if (Math.sqrt(dx*dx + dy*dy) < 280) {
+      // Too close — requeue and skip this turn
+      tweetQueue.push(nodeIdx);
+      return;
+    }
+  }
+
   activeCards.add(nodeIdx);
+  activeCardPositions.set(nodeIdx, { x: cardX, y: cardY });
 
   const card = document.createElement('div');
   card.className = 'tweet-card';
@@ -638,11 +656,9 @@ function showTweetCard(nodeIdx) {
       <span class="tc-time">${timeAgo(tweet.created)}</span>
     </div>`;
 
-  // Position near the node — offset so it doesn't overlap the photo
-  const offX = n.x > cx ? -(248) : 8;
-  const offY = -60;
-  card.style.left = (n.x + offX) + 'px';
-  card.style.top  = (n.y + offY) + 'px';
+  // Position near the node using pre-conflict-checked coordinates
+  card.style.left = cardX + 'px';
+  card.style.top  = cardY + 'px';
 
   document.body.appendChild(card);
 
@@ -651,6 +667,7 @@ function showTweetCard(nodeIdx) {
   setTimeout(() => {
     card.remove();
     activeCards.delete(nodeIdx);
+    activeCardPositions.delete(nodeIdx);
     // Re-queue this node at the back
     tweetQueue.push(nodeIdx);
   }, total);
