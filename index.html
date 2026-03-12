@@ -558,9 +558,10 @@ const WORKER_URL = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
 const tweetCache = {};        // handle → tweet object
 let   tweetQueue  = [];       // nodeState indices waiting to show card
 let   activeCards = new Set();// indices currently showing a card
-const MAX_CARDS   = 3;        // max simultaneous cards
-const CARD_DUR    = 7;        // seconds each card stays visible
-const FETCH_INTERVAL = 10 * 60 * 1000; // refresh every 10 min
+const MAX_CARDS      = 3;             // max simultaneous cards
+const CARD_DUR       = 7;             // seconds each card stays visible
+const FETCH_INTERVAL = 5 * 60 * 1000; // refresh every 5 min
+const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000; // 5 hours in ms
 
 async function fetchTweets() {
   const handles = nodes.map(n => n.tw).filter(Boolean);
@@ -572,10 +573,15 @@ async function fetchTweets() {
       const data = await res.json();
       Object.assign(tweetCache, data);
       console.log(`[tweets] loaded ${Object.keys(data).length} tweets`);
-      // Seed queue with all nodes that have tweets
+      // Seed queue with nodes that have tweets newer than 5 hours
+      const now = Date.now();
       tweetQueue = nodeState
         .map((_,i)=>i)
-        .filter(i => tweetCache[nodeState[i]?.tw?.toLowerCase()])
+        .filter(i => {
+          const tweet = tweetCache[nodeState[i]?.tw?.toLowerCase()];
+          if (!tweet) return false;
+          return (now - new Date(tweet.created).getTime()) < MAX_TWEET_AGE;
+        })
         .sort(() => Math.random() - 0.5);
     } catch(e) {
       console.warn('[tweets] fetch failed:', e);
@@ -600,6 +606,7 @@ function showTweetCard(nodeIdx) {
   if (!n) return;
   const tweet = tweetCache[n.tw?.toLowerCase()];
   if (!tweet) return;
+  if ((Date.now() - new Date(tweet.created).getTime()) >= MAX_TWEET_AGE) return;
 
   activeCards.add(nodeIdx);
 
