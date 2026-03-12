@@ -238,14 +238,15 @@ function computeLayout() {
   const ring1 = nodes.filter(n=>n.cat.ring===1);
   const ring2 = nodes.filter(n=>n.cat.ring===2);
   nodeState = [];
+  // All nodes on the same ring share one speed → they stay evenly spaced forever
   ring1.forEach((n,i) => {
     const a = (2*Math.PI/ring1.length)*i - Math.PI/2;
-    nodeState.push({...n, baseAngle:a, r:r1, speed:0.00013*(1+i*0.04),
+    nodeState.push({...n, baseAngle:a, r:r1, speed:0.00011,
       x:cx+r1*Math.cos(a), y:cy+r1*Math.sin(a), radius:26});
   });
   ring2.forEach((n,i) => {
     const a = (2*Math.PI/ring2.length)*i - Math.PI/3;
-    nodeState.push({...n, baseAngle:a, r:r2, speed:0.00009*(1+i*0.03),
+    nodeState.push({...n, baseAngle:a, r:r2, speed:0.00007,
       x:cx+r2*Math.cos(a), y:cy+r2*Math.sin(a), radius:24});
   });
   // Only generate peer edges once (on first layout)
@@ -513,11 +514,33 @@ function frame(ts) {
   drawStars();
 
   const md=Math.min(W,H);
+  // Advance orbital angles
   nodeState.forEach(n => {
-    n.baseAngle+=n.speed;
-    n.x=cx+n.r*Math.cos(n.baseAngle);
-    n.y=cy+n.r*Math.sin(n.baseAngle);
+    n.baseAngle += n.speed;
+    n.x = cx + n.r*Math.cos(n.baseAngle);
+    n.y = cy + n.r*Math.sin(n.baseAngle);
   });
+
+  // Soft repulsion — nudge angles apart when any two nodes get too close
+  const MIN_NODE_DIST = 72;
+  const REPULSE = 0.000018;
+  for (let i = 0; i < nodeState.length; i++) {
+    for (let j = i+1; j < nodeState.length; j++) {
+      const a = nodeState[i], b = nodeState[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < MIN_NODE_DIST && dist > 0) {
+        const force = (MIN_NODE_DIST - dist) / MIN_NODE_DIST * REPULSE;
+        a.baseAngle -= force;
+        b.baseAngle += force;
+        // Recompute positions after nudge
+        a.x = cx + a.r*Math.cos(a.baseAngle);
+        a.y = cy + a.r*Math.sin(a.baseAngle);
+        b.x = cx + b.r*Math.cos(b.baseAngle);
+        b.y = cy + b.r*Math.sin(b.baseAngle);
+      }
+    }
+  }
 
   drawOrbitRing(md*0.27,0.08);
   drawOrbitRing(md*0.44,0.06);
