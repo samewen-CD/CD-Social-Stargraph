@@ -573,6 +573,7 @@ function drawNode(n, idx) {
 
 // ── Render loop ───────────────────────────────────────────────────────────────
 function frame(ts) {
+  requestAnimationFrame(frame); // schedule FIRST — errors below can never kill the loop
   time=ts;
   ctx.clearRect(0,0,W,H);
   const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*0.8);
@@ -615,8 +616,6 @@ function frame(ts) {
   drawAllEdges();
   nodeState.forEach((n,i)=>drawNode(n,i));
   drawCenter();
-  updateTweetLines();
-  requestAnimationFrame(frame);
 }
 
 // ── Mouse ─────────────────────────────────────────────────────────────────────
@@ -732,86 +731,73 @@ function buildCard(n, tweet, nodeIdx) {
 }
 
 // ── Live connecting lines: node → tweet card ──────────────────────────────────
-// Persistent element map — create SVG elements once per card, update each frame.
-// Rect reads are throttled to ~8fps to eliminate layout thrashing.
-const tweetLineMap  = new Map();  // card el → { path, dot }
-const lineRectCache = new Map();  // card el → DOMRect
-let   lastRectUpdate = 0;
+// Runs on its own 100ms interval (NOT inside the rAF loop) so it never
+// blocks or crashes the canvas animation.
+const tweetLineMap = new Map(); // card el → { path, dot }
 
 function updateTweetLines() {
-  const svg   = document.getElementById('tweetLines');
-  const stack = document.getElementById('tweetStack');
-  if (!svg || !stack) return;
+  try {
+    const svg   = document.getElementById('tweetLines');
+    const stack = document.getElementById('tweetStack');
+    if (!svg || !stack) return;
 
-  const now   = performance.now();
-  const cards = Array.from(stack.children);
+    const cards = Array.from(stack.children);
 
-  // ── 1. Remove stale entries for cards that left the DOM ───────────────────
-  for (const [card, els] of tweetLineMap) {
-    if (!stack.contains(card)) {
-      els.path.remove();
-      els.dot.remove();
-      tweetLineMap.delete(card);
-      lineRectCache.delete(card);
+    // 1. Clean up SVG elements for cards that have left the DOM
+    const toDelete = [];
+    for (const [card, els] of tweetLineMap) {
+      if (!stack.contains(card)) toDelete.push([card, els]);
     }
-  }
+    toDelete.forEach(([card, els]) => {
+      els.path.remove(); els.dot.remove();
+      tweetLineMap.delete(card);
+    });
 
-  if (!cards.length) return;
+    if (!cards.length) return;
 
-  // ── 2. Throttle getBoundingClientRect to ~8fps (every 125ms) ─────────────
-  if (now - lastRectUpdate > 125) {
-    cards.forEach(c => lineRectCache.set(c, c.getBoundingClientRect()));
-    lastRectUpdate = now;
-  }
-
-  // ── 3. Create persistent SVG elements for new cards ───────────────────────
-  cards.forEach(card => {
-    if (!tweetLineMap.has(card)) {
+    // 2. Create persistent SVG elements for cards that just entered
+    cards.forEach(card => {
+      if (tweetLineMap.has(card)) return;
       const color = card.dataset.catColor || '#f0a500';
       const path  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('fill',         'none');
-      path.setAttribute('stroke',       color);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', color);
       path.setAttribute('stroke-width', '1.2');
       path.setAttribute('stroke-dasharray', '4 6');
       svg.appendChild(path);
-
       const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      dot.setAttribute('r',    '3');
+      dot.setAttribute('r', '3');
       dot.setAttribute('fill', color);
       svg.appendChild(dot);
-
       tweetLineMap.set(card, { path, dot });
-    }
-  });
+    });
 
-  // ── 4. Update path/dot positions ──────────────────────────────────────────
-  cards.forEach(card => {
-    const nodeIdx = parseInt(card.dataset.nodeIdx);
-    if (isNaN(nodeIdx)) return;
-    const node = nodeState[nodeIdx];
-    if (!node) return;
-    const els  = tweetLineMap.get(card);
-    if (!els) return;
-    const rect = lineRectCache.get(card);
-    if (!rect) return;
+    // 3. Update positions — getBoundingClientRect is safe here (not in rAF)
+    cards.forEach(card => {
+      const nodeIdx = parseInt(card.dataset.nodeIdx);
+      if (isNaN(nodeIdx)) return;
+      const node = nodeState[nodeIdx]; if (!node) return;
+      const els  = tweetLineMap.get(card); if (!els) return;
 
-    // Hide during enter/exit transitions (use class check, not getComputedStyle)
-    if (card.classList.contains('entering') || card.classList.contains('exiting')) {
-      els.path.setAttribute('stroke-opacity', '0');
-      els.dot.setAttribute( 'fill-opacity',   '0');
-      return;
-    }
+      if (card.classList.contains('entering') || card.classList.contains('exiting')) {
+        els.path.setAttribute('stroke-opacity', '0');
+        els.dot.setAttribute('fill-opacity', '0');
+        return;
+      }
 
-    const ex = rect.left;
-    const ey = rect.top + rect.height * 0.5;
-    const mx = (node.x + ex) * 0.5;
+      const rect = card.getBoundingClientRect();
+      const ex = rect.left, ey = rect.top + rect.height * 0.5;
+      const mx = (node.x + ex) * 0.5;
 
-    els.path.setAttribute('d', `M ${node.x} ${node.y} Q ${mx} ${node.y} ${ex} ${ey}`);
-    els.path.setAttribute('stroke-opacity', '0.5');
-    els.dot.setAttribute('cx',           node.x);
-    els.dot.setAttribute('cy',           node.y);
-    els.dot.setAttribute('fill-opacity', '0.7');
-  });
+      els.path.setAttribute('d', `M ${node.x} ${node.y} Q ${mx} ${node.y} ${ex} ${ey}`);
+      els.path.setAttribute('stroke-opacity', '0.5');
+      els.dot.setAttribute('cx', node.x);
+      els.dot.setAttribute('cy', node.y);
+      els.dot.setAttribute('fill-opacity', '0.7');
+    });
+  } catch(e) {
+    console.warn('[tweetLines]', e);
+  }
 }
 
 // Push next tweet to the top of the right-side stack
@@ -849,6 +835,7 @@ function cycleTweets() {
 resize();
 requestAnimationFrame(frame);
 loadAllImages();
+setInterval(updateTweetLines, 100); // run SVG line updates at 10fps, separate from rAF
 
 // Load tweets then start cycling the stack
 fetchTweets().then(() => {
