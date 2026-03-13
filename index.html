@@ -503,7 +503,7 @@ canvas.addEventListener('mouseleave',()=>{hoveredIdx=-1;tip.style.opacity='0';})
 window.addEventListener('resize',resize);
 // ── Tweet system ──────────────────────────────────────────────────────────────
 const WORKER_URL     = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
-const FETCH_INTERVAL = 5 * 60 * 1000;
+const FETCH_INTERVAL = 2 * 60 * 1000;
 const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000;
 const STACK_SIZE     = 3;
 const CYCLE_INTERVAL = 9000;
@@ -530,7 +530,7 @@ async function fetchTweets() {
         .sort((a, b) => {
           const tA = new Date(tweetCache[nodeState[a]?.tw?.toLowerCase()]?.created || 0);
           const tB = new Date(tweetCache[nodeState[b]?.tw?.toLowerCase()]?.created || 0);
-          return tA - tB;
+          return tB - tA; // newest first
         });
     } catch(e) {
       console.warn('[tweets] fetch failed:', e);
@@ -681,7 +681,8 @@ fetchTweets().then(() => {
   if (tweetQueue.length === 0) return;
   const stack = document.getElementById('tweetStack');
   const seedCount = Math.min(STACK_SIZE, tweetQueue.length);
-  tweetQueue.slice(-seedCount).forEach(nodeIdx => {
+  // tweetQueue is newest→oldest; take first seedCount, insert oldest-of-them first so newest ends on top
+  tweetQueue.slice(0, seedCount).reverse().forEach(nodeIdx => {
     const n = nodeState[nodeIdx]; if (!n) return;
     const tweet = tweetCache[n.tw?.toLowerCase()]; if (!tweet) return;
     const seedAge = Date.now() - new Date(tweet.created).getTime();
