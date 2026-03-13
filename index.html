@@ -45,16 +45,20 @@
       padding: 11px 13px 10px;
       box-shadow: 0 0 20px rgba(240,165,0,0.18), 0 4px 24px rgba(0,0,0,0.6);
       opacity: 1;
-      transform: translateY(0);
-      transition: opacity 0.35s ease, transform 0.35s ease;
+      transform: translateY(0) scale(1);
+      /* Spring easing: fast start, smooth overshoot settle */
+      transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .tweet-card.entering {
       opacity: 0;
-      transform: translateY(-14px);
+      transform: translateY(-18px) scale(0.96);
     }
     .tweet-card.exiting {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(12px) scale(0.97);
+      /* Quicker ease-in on exit */
+      transition: opacity 0.32s ease-in, transform 0.32s ease-in;
     }
     .tweet-card .tc-header { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
     .tweet-card .tc-avatar { width:30px; height:30px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(240,165,0,0.4); }
@@ -96,6 +100,7 @@
   <div class="li"><div class="ld" style="background:#b060ff"></div>Finance / Investing</div>
   <div class="li"><div class="ld" style="background:#ff6b6b"></div>Tech / Media</div>
 </div>
+<svg id="tweetLines" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99;overflow:visible;"></svg>
 <div id="tweetStack"></div>
 <div id="loading">Loading photos…</div>
 
@@ -610,6 +615,7 @@ function frame(ts) {
   drawAllEdges();
   nodeState.forEach((n,i)=>drawNode(n,i));
   drawCenter();
+  updateTweetLines();
   requestAnimationFrame(frame);
 }
 
@@ -696,9 +702,11 @@ function truncate(text, max=160) {
 }
 
 // Build a card DOM element for a given node + tweet
-function buildCard(n, tweet) {
+function buildCard(n, tweet, nodeIdx) {
   const card = document.createElement('div');
   card.className = 'tweet-card entering';
+  card.dataset.nodeIdx  = nodeIdx;   // used by updateTweetLines()
+  card.dataset.catColor = n.cat.color;
   card.style.borderColor = n.cat.color + '88';
   card.style.boxShadow   = `0 0 20px ${n.cat.color}33, 0 4px 24px rgba(0,0,0,0.6)`;
 
@@ -723,6 +731,53 @@ function buildCard(n, tweet) {
   return card;
 }
 
+// ── Live connecting lines: node → tweet card ──────────────────────────────────
+function updateTweetLines() {
+  const svg   = document.getElementById('tweetLines');
+  const stack = document.getElementById('tweetStack');
+  if (!svg || !stack) return;
+
+  // Clear previous lines
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  Array.from(stack.children).forEach(card => {
+    const nodeIdx = parseInt(card.dataset.nodeIdx);
+    if (isNaN(nodeIdx)) return;
+    const node = nodeState[nodeIdx];
+    if (!node) return;
+
+    const color   = card.dataset.catColor || '#f0a500';
+    const cardRect = card.getBoundingClientRect();
+    const opacity  = parseFloat(window.getComputedStyle(card).opacity) || 1;
+    if (opacity < 0.05) return; // skip if card is invisible
+
+    // Line end: left-center of the card
+    const ex = cardRect.left;
+    const ey = cardRect.top + cardRect.height * 0.5;
+
+    // Draw a subtle curved path using a quadratic bezier
+    const mx = (node.x + ex) * 0.5; // midpoint x — keeps curve flat
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${node.x} ${node.y} Q ${mx} ${node.y} ${ex} ${ey}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', '1.2');
+    path.setAttribute('stroke-opacity', (opacity * 0.5).toString());
+    path.setAttribute('stroke-dasharray', '4 6');
+    svg.appendChild(path);
+
+    // Small dot at the node end
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', node.x);
+    dot.setAttribute('cy', node.y);
+    dot.setAttribute('r', '3');
+    dot.setAttribute('fill', color);
+    dot.setAttribute('fill-opacity', (opacity * 0.7).toString());
+    svg.appendChild(dot);
+  });
+}
+
 // Push next tweet to the top of the right-side stack
 function cycleTweets() {
   if (tweetQueue.length === 0) return;
@@ -738,7 +793,7 @@ function cycleTweets() {
   if ((Date.now() - new Date(tweet.created).getTime()) >= MAX_TWEET_AGE) return;
 
   const stack = document.getElementById('tweetStack');
-  const card  = buildCard(n, tweet);
+  const card  = buildCard(n, tweet, nodeIdx);
 
   // Insert at top
   stack.insertBefore(card, stack.firstChild);
