@@ -80,6 +80,9 @@
   <div class="li"><div class="ld" style="background:#00d4ff"></div>Crypto Industry</div>
   <div class="li"><div class="ld" style="background:#b060ff"></div>Finance / Investing</div>
   <div class="li"><div class="ld" style="background:#ff6b6b"></div>Tech / Media</div>
+  <div style="color:#f0a500;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-top:10px;margin-bottom:3px">CONNECTIONS</div>
+  <div class="li"><div style="width:20px;height:2px;background:rgba(240,195,80,0.7);border-radius:1px;flex-shrink:0"></div>Mutual follows</div>
+  <div class="li"><div style="width:20px;height:1px;background:rgba(180,200,255,0.45);border-radius:1px;flex-shrink:0"></div>Follows</div>
 </div>
 <div id="loading">Loading photos…</div>
 
@@ -210,9 +213,10 @@ function updateLoader() {
 // ── Layout ────────────────────────────────────────────────────────────────────
 let W, H, cx, cy;
 let nodeState = [];
-let peerEdges  = [];   // [{a, b, phase}]  — node-to-node connections
+let peerEdges  = [];   // [{a, b, phase, mutual}]  — node-to-node connections
 let hoveredIdx = -1;
 let time = 0;
+let followDataLoaded = false;  // true once real Twitter follow data has been applied
 
 function positionLogo() {
   const baseR = Math.min(W,H)*0.062;
@@ -249,8 +253,9 @@ function computeLayout() {
     nodeState.push({...n, baseAngle:a, r:r2, speed:0.00007,
       x:cx+r2*Math.cos(a), y:cy+r2*Math.sin(a), radius:24});
   });
-  // Only generate peer edges once (on first layout)
-  if (peerEdges.length === 0) generatePeerEdges();
+  // Generate random peer edges only on first layout AND only if real follow
+  // data hasn't been loaded yet (avoids overwriting real edges on resize)
+  if (peerEdges.length === 0 && !followDataLoaded) generatePeerEdges();
 }
 
 function generatePeerEdges() {
@@ -287,6 +292,44 @@ function generatePeerEdges() {
     const b = Math.floor(rand() * n);
     if (degreeCount[a] < 5 && degreeCount[b] < 5) addEdge(a, b);
   }
+}
+
+// ── Build real peer edges from Twitter follow graph ───────────────────────────
+// graph: { "handle": ["followed_handle1", ...], ... }
+function buildFollowEdges(graph) {
+  peerEdges = [];
+  followDataLoaded = true;
+
+  let seed = 42;
+  const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
+
+  // Map twitter handle → nodeState index for fast lookup
+  const handleToIdx = {};
+  nodeState.forEach((n, i) => { if (n.tw) handleToIdx[n.tw.toLowerCase()] = i; });
+
+  const edgeSet = new Set();
+
+  for (const [fromHandle, followedHandles] of Object.entries(graph)) {
+    const fromIdx = handleToIdx[fromHandle];
+    if (fromIdx === undefined) continue;
+
+    for (const toHandle of followedHandles) {
+      const toIdx = handleToIdx[toHandle];
+      if (toIdx === undefined || toIdx === fromIdx) continue;
+
+      // Use a canonical key so we don't add A→B and B→A as two separate lines
+      const key = `${Math.min(fromIdx, toIdx)}-${Math.max(fromIdx, toIdx)}`;
+      if (edgeSet.has(key)) continue;
+      edgeSet.add(key);
+
+      // Mutual if B also follows A
+      const mutual = !!(graph[toHandle] && graph[toHandle].includes(fromHandle));
+
+      peerEdges.push({ a: fromIdx, b: toIdx, phase: rand() * Math.PI * 2, mutual });
+    }
+  }
+
+  console.log(`[follows] built ${peerEdges.length} edges (${peerEdges.filter(e=>e.mutual).length} mutual)`);
 }
 
 // ── Stars ─────────────────────────────────────────────────────────────────────
@@ -413,14 +456,21 @@ function drawAllEdges() {
     const pulse = 0.5 + 0.5*Math.sin(time*0.0008 + e.phase);
 
     if (active) {
-      // Glowing gradient line on hover
+      // Glowing gradient line on hover — same for all edge types
       const gr = ctx.createLinearGradient(na.x, na.y, nb.x, nb.y);
-      gr.addColorStop(0, na.cat.color + 'dd');
-      gr.addColorStop(1, nb.cat.color + 'dd');
+      gr.addColorStop(0, na.cat.color + 'ee');
+      gr.addColorStop(1, nb.cat.color + 'ee');
       ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
-      ctx.lineWidth = 2; ctx.strokeStyle = gr; ctx.stroke();
+      ctx.lineWidth = e.mutual ? 2.5 : 2; ctx.strokeStyle = gr; ctx.stroke();
+    } else if (e.mutual) {
+      // Mutual follows → warm gold-amber line (stands out from one-way/random)
+      const alpha = (0.24 + 0.13*pulse).toFixed(2);
+      ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
+      ctx.lineWidth   = 1.4;
+      ctx.strokeStyle = `rgba(240,195,80,${alpha})`;
+      ctx.stroke();
     } else {
-      // Pulsing line at rest — more visible
+      // One-way follow or random connection — pulsing blue-white
       const alpha = (0.18 + 0.10*pulse).toFixed(2);
       ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
       ctx.lineWidth   = 1.0;
@@ -592,6 +642,31 @@ const CARD_DUR       = 7;             // seconds each card stays visible
 const FETCH_INTERVAL = 5 * 60 * 1000; // refresh every 5 min
 const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000; // 5 hours in ms
 
+// ── Follow graph (real Twitter connections) ────────────────────────────────
+async function fetchFollowGraph() {
+  if (WORKER_URL.includes('YOUR-SUBDOMAIN')) return;
+  const handles = nodes.map(n => n.tw).filter(Boolean);
+  try {
+    const res = await fetch(`${WORKER_URL}/follows?handles=${handles.join(',')}`);
+    if (!res.ok) { console.warn('[follows] HTTP', res.status); return; }
+    const graph = await res.json();
+    if (graph.error) { console.warn('[follows] error:', graph.error); return; }
+
+    const edgeCount = Object.values(graph).reduce((s, a) => s + a.length, 0);
+    console.log(`[follows] received graph for ${Object.keys(graph).length} users, ${edgeCount} raw edges`);
+
+    if (edgeCount > 0) {
+      buildFollowEdges(graph);
+      // Flash a status message so users know the graph is live
+      loadEl.style.opacity = '1';
+      loadEl.textContent   = `Live follow graph: ${peerEdges.length} connections (${peerEdges.filter(e=>e.mutual).length} mutual)`;
+      setTimeout(() => { loadEl.style.opacity = '0'; }, 4000);
+    }
+  } catch(e) {
+    console.warn('[follows] fetch failed:', e);
+  }
+}
+
 async function fetchTweets() {
   const handles = nodes.map(n => n.tw).filter(Boolean);
   if (!WORKER_URL.includes('YOUR-SUBDOMAIN')) {
@@ -714,6 +789,12 @@ function tickTweetQueue() {
 resize();
 requestAnimationFrame(frame);
 loadAllImages();
+
+// Load follow graph early — it replaces random edges once data arrives.
+// Runs once; no need to refresh frequently (cached 6h on worker).
+fetchFollowGraph();
+
+// Load tweets on a repeating interval
 fetchTweets().then(() => setTimeout(tickTweetQueue, 3000));
 setInterval(fetchTweets, FETCH_INTERVAL);
 </script>
