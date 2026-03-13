@@ -103,7 +103,6 @@
 <svg id="tweetLines" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99;overflow:visible;"></svg>
 <div id="tweetStack"></div>
 <div id="loading">Loading photos…</div>
-
 <script>
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
@@ -111,13 +110,11 @@ const tip    = document.getElementById('tooltip');
 const ttN    = document.getElementById('ttN');
 const ttR    = document.getElementById('ttR');
 const loadEl = document.getElementById('loading');
-
 // ── Categories ────────────────────────────────────────────────────────────────
 const GOVT   = { color:'#f0a500', glow:'rgba(240,165,0,0.4)',   ring:1 };
 const CRYPTO = { color:'#00d4ff', glow:'rgba(0,212,255,0.4)',   ring:2 };
 const FIN    = { color:'#b060ff', glow:'rgba(176,96,255,0.4)',  ring:1 };
 const MEDIA  = { color:'#ff6b6b', glow:'rgba(255,107,107,0.4)', ring:2 };
-
 // ── Nodes: name, org, role, category, twitter handle, wikipedia title ────────
 const nodes = [
   // Government / Policy (ring 1)
@@ -156,13 +153,10 @@ const nodes = [
   { name:'Kate Rouch',             org:'OpenAI',                      role:'CMO, OpenAI',                                              cat:MEDIA,  tw:'kate_rouch',        wiki:null },
   { name:'Chamath Palihapitiya',   org:'Social Capital',              role:'Investor & All-In Podcast Co-Host',                        cat:FIN,    tw:'chamath',           wiki:'Chamath Palihapitiya' },
 ];
-
 // ── Image cache: key -> HTMLImageElement | null | 'loading' ─────────────────
 const imgCache = {};
-let coinDeskLogo = null;
 let loaded = 0;
 const TOTAL = nodes.length + 1;
-
 function loadImg(src) {
   return new Promise(res => {
     let settled = false;
@@ -175,11 +169,9 @@ function loadImg(src) {
     const tid = setTimeout(() => finish(null), 8000);
   });
 }
-
 async function fetchPersonImage(n) {
   const key = n.name.replace('\n',' ');
   imgCache[key] = 'loading';
-
   // 1. Try unavatar.io (Twitter profile photo)
   if (n.tw) {
     const img = await loadImg(`https://unavatar.io/twitter/${n.tw}`);
@@ -188,7 +180,6 @@ async function fetchPersonImage(n) {
     const img2 = await loadImg(`https://unavatar.io/x/${n.tw}`);
     if (img2) { imgCache[key] = img2; loaded++; updateLoader(); return; }
   }
-
   // 2. Try Wikipedia thumbnail
   if (n.wiki) {
     try {
@@ -206,38 +197,30 @@ async function fetchPersonImage(n) {
       }
     } catch {}
   }
-
   imgCache[key] = null;
   loaded++;
   updateLoader();
 }
-
 async function loadAllImages() {
   // Logo is handled via HTML <img> element — skip canvas fetch
   loaded++;
   updateLoader();
-
   // Load all node photos in parallel batches of 6
   for (let i = 0; i < nodes.length; i += 6) {
     await Promise.all(nodes.slice(i, i+6).map(fetchPersonImage));
   }
-
   loadEl.style.opacity = '0';
   setTimeout(() => loadEl.style.display='none', 700);
 }
-
 function updateLoader() {
   loadEl.textContent = `Loading photos… ${loaded}/${TOTAL}`;
 }
-
 // ── Layout ────────────────────────────────────────────────────────────────────
 let W, H, cx, cy;
 let nodeState = [];
-let peerEdges  = [];   // [{a, b, phase, mutual}]  — node-to-node connections
+let peerEdges  = [];
 let hoveredIdx = -1;
 let time = 0;
-let followDataLoaded = false;  // true once real Twitter follow data has been applied
-
 function positionLogo() {
   const baseR = Math.min(W,H)*0.062;
   const el = document.getElementById('centerLogo');
@@ -247,7 +230,6 @@ function positionLogo() {
   el.style.left   = (cx - baseR) + 'px';
   el.style.top    = (cy - baseR) + 'px';
 }
-
 function resize() {
   W = canvas.width  = window.innerWidth;
   H = canvas.height = window.innerHeight;
@@ -256,14 +238,12 @@ function resize() {
   computeLayout();
   positionLogo();
 }
-
 function computeLayout() {
   const md = Math.min(W,H);
   const r1 = md*0.27, r2 = md*0.44;
   const ring1 = nodes.filter(n=>n.cat.ring===1);
   const ring2 = nodes.filter(n=>n.cat.ring===2);
   nodeState = [];
-  // All nodes on the same ring share one speed → they stay evenly spaced forever
   ring1.forEach((n,i) => {
     const a = (2*Math.PI/ring1.length)*i - Math.PI/2;
     nodeState.push({...n, baseAngle:a, r:r1, speed:0.00011,
@@ -274,20 +254,14 @@ function computeLayout() {
     nodeState.push({...n, baseAngle:a, r:r2, speed:0.00007,
       x:cx+r2*Math.cos(a), y:cy+r2*Math.sin(a), radius:24});
   });
-  // Generate random peer edges only on first layout AND only if real follow
-  // data hasn't been loaded yet (avoids overwriting real edges on resize)
-  if (peerEdges.length === 0 && !followDataLoaded) generatePeerEdges();
+  if (peerEdges.length === 0) generatePeerEdges();
 }
-
 function generatePeerEdges() {
-  // Seeded-ish random for reproducibility
   let seed = 42;
   const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
-
   const n = nodeState.length;
   const edgeSet = new Set();
   const degreeCount = new Array(n).fill(0);
-
   const addEdge = (a, b) => {
     if (a === b) return;
     const key = `${Math.min(a,b)}-${Math.max(a,b)}`;
@@ -296,63 +270,22 @@ function generatePeerEdges() {
     degreeCount[a]++; degreeCount[b]++;
     peerEdges.push({ a, b, phase: rand() * Math.PI * 2 });
   };
-
   // 1. Same-category connections (cluster feel)
   for (let i = 0; i < n; i++) {
     const sameCat = nodeState.map((nd,j) => j).filter(j => j !== i && nodeState[j].cat === nodeState[i].cat);
-    const picks = Math.floor(rand() * 2) + 1; // 1-2 same-cat edges each
+    const picks = Math.floor(rand() * 2) + 1;
     for (let p = 0; p < picks; p++) {
       const j = sameCat[Math.floor(rand() * sameCat.length)];
       if (j !== undefined) addEdge(i, j);
     }
   }
-
-  // 2. Cross-category random connections (web feel) — ~30 extras
+  // 2. Cross-category random connections — ~30 extras
   for (let e = 0; e < 34; e++) {
     const a = Math.floor(rand() * n);
     const b = Math.floor(rand() * n);
     if (degreeCount[a] < 5 && degreeCount[b] < 5) addEdge(a, b);
   }
 }
-
-// ── Build real peer edges from Twitter follow graph ───────────────────────────
-// graph: { "handle": ["followed_handle1", ...], ... }
-function buildFollowEdges(graph) {
-  peerEdges = [];
-  followDataLoaded = true;
-
-  let seed = 42;
-  const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
-
-  // Map twitter handle → nodeState index for fast lookup
-  const handleToIdx = {};
-  nodeState.forEach((n, i) => { if (n.tw) handleToIdx[n.tw.toLowerCase()] = i; });
-
-  const edgeSet = new Set();
-
-  for (const [fromHandle, followedHandles] of Object.entries(graph)) {
-    const fromIdx = handleToIdx[fromHandle];
-    if (fromIdx === undefined) continue;
-
-    for (const toHandle of followedHandles) {
-      const toIdx = handleToIdx[toHandle];
-      if (toIdx === undefined || toIdx === fromIdx) continue;
-
-      // Use a canonical key so we don't add A→B and B→A as two separate lines
-      const key = `${Math.min(fromIdx, toIdx)}-${Math.max(fromIdx, toIdx)}`;
-      if (edgeSet.has(key)) continue;
-      edgeSet.add(key);
-
-      // Mutual if B also follows A
-      const mutual = !!(graph[toHandle] && graph[toHandle].includes(fromHandle));
-
-      peerEdges.push({ a: fromIdx, b: toIdx, phase: rand() * Math.PI * 2, mutual });
-    }
-  }
-
-  console.log(`[follows] built ${peerEdges.length} edges (${peerEdges.filter(e=>e.mutual).length} mutual)`);
-}
-
 // ── Stars ─────────────────────────────────────────────────────────────────────
 const stars = Array.from({length:150}, ()=>({x:Math.random(),y:Math.random(),s:Math.random()*1.8+0.2,a:Math.random()}));
 function drawStars() {
@@ -363,87 +296,26 @@ function drawStars() {
   });
   ctx.globalAlpha=1;
 }
-
 function drawOrbitRing(r,a=0.09) {
   ctx.save(); ctx.strokeStyle=`rgba(240,165,0,${a})`; ctx.lineWidth=1;
   ctx.setLineDash([4,14]);
   ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
   ctx.setLineDash([]); ctx.restore();
 }
-
-// ── CoinDesk logo (canvas-drawn SVG approximation) ───────────────────────────
-function drawCoinDeskIcon(x, y, size) {
-  // Recreate the CoinDesk "C" mark with molecular bumps + 3 dots
-  ctx.save();
-  ctx.translate(x - size*0.12, y);
-  const sc = size / 52;
-
-  // Helper: filled circle
-  const circ = (cx,cy,r) => { ctx.beginPath(); ctx.arc(cx*sc,cy*sc,r*sc,0,Math.PI*2); ctx.fill(); };
-
-  ctx.fillStyle = '#F0A500';
-
-  // Build the C-shape from overlapping rounded rectangles / circles
-  // Spine (left vertical bar)
-  ctx.beginPath();
-  ctx.roundRect(-26*sc, -22*sc, 14*sc, 44*sc, 7*sc);
-  ctx.fill();
-
-  // Top bar
-  ctx.beginPath();
-  ctx.roundRect(-24*sc, -26*sc, 40*sc, 14*sc, 7*sc);
-  ctx.fill();
-
-  // Bottom bar
-  ctx.beginPath();
-  ctx.roundRect(-24*sc, 12*sc, 34*sc, 13*sc, 6.5*sc);
-  ctx.fill();
-
-  // Middle connector bumps (the lumps on the inner edge of C)
-  circ(-8, -12, 9);   // upper inner lump
-  circ(-8,  12, 9);   // lower inner lump
-
-  // Erase inner hollow of C using destination-out
-  ctx.save();
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = 'rgba(0,0,0,1)';
-  ctx.beginPath();
-  ctx.roundRect(-8*sc, -14*sc, 36*sc, 28*sc, 6*sc);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.fillStyle = '#F0A500';
-
-  // 3 dots (right side of logo)
-  circ(30, -14, 6.5); // top-right
-  circ(38, -2,  5.5); // middle-right
-  circ(30,  12, 5.5); // bottom
-
-  ctx.restore();
-}
-
-// ── Center node — canvas draws glow only; HTML <img> overlays the logo ───────
+// ── Center node ───────────────────────────────────────────────────────────────
 function drawCenter() {
   const pulse  = 1 + 0.03*Math.sin(time*0.002);
   const baseR  = Math.min(W,H)*0.062*pulse;
-
-  // Pulsing glow — 2 layers instead of 4 (halves gradient creation cost)
   [0.065, 0.22].forEach((a,i) => {
     const gr = ctx.createRadialGradient(cx,cy,0,cx,cy,baseR*(2.7-i*0.8));
     gr.addColorStop(0,`rgba(240,165,0,${a})`); gr.addColorStop(1,'transparent');
     ctx.beginPath(); ctx.arc(cx,cy,baseR*(2.7-i*0.8),0,Math.PI*2);
     ctx.fillStyle=gr; ctx.fill();
   });
-
-  // Solid black disc (HTML img sits on top via z-index / DOM layering)
   ctx.beginPath(); ctx.arc(cx,cy,baseR,0,Math.PI*2);
   ctx.fillStyle='#000'; ctx.fill();
-
-  // Gold ring (drawn on canvas, appears behind HTML element — redraw on top via DOM order)
   ctx.beginPath(); ctx.arc(cx,cy,baseR,0,Math.PI*2);
   ctx.strokeStyle='rgba(240,165,0,0.78)'; ctx.lineWidth=2.5; ctx.stroke();
-
-  // Keep HTML logo pulsing in sync
   const el = document.getElementById('centerLogo');
   const d  = baseR*2;
   el.style.width  = d + 'px';
@@ -451,12 +323,9 @@ function drawCenter() {
   el.style.left   = (cx - baseR) + 'px';
   el.style.top    = (cy - baseR) + 'px';
 }
-
-// ── Draw all edges (center→node and peer) ─────────────────────────────────────
+// ── Draw all edges ─────────────────────────────────────────────────────────────
 function drawAllEdges() {
   const n = nodeState.length;
-
-  // Center → every node
   for (let i = 0; i < n; i++) {
     const nd  = nodeState[i];
     const hov = hoveredIdx === i;
@@ -465,33 +334,19 @@ function drawAllEdges() {
     ctx.strokeStyle = hov ? nd.cat.color + 'cc' : 'rgba(240,165,0,0.32)';
     ctx.stroke();
   }
-
-  // Peer → peer edges
   peerEdges.forEach(e => {
     const na = nodeState[e.a], nb = nodeState[e.b];
     if (!na || !nb) return;
     const hovA = hoveredIdx === e.a, hovB = hoveredIdx === e.b;
     const active = hovA || hovB;
-
-    // Animate a soft pulse along the line
     const pulse = 0.5 + 0.5*Math.sin(time*0.0008 + e.phase);
-
     if (active) {
-      // Glowing gradient line on hover — same for all edge types
       const gr = ctx.createLinearGradient(na.x, na.y, nb.x, nb.y);
       gr.addColorStop(0, na.cat.color + 'ee');
       gr.addColorStop(1, nb.cat.color + 'ee');
       ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
-      ctx.lineWidth = e.mutual ? 2.5 : 2; ctx.strokeStyle = gr; ctx.stroke();
-    } else if (e.mutual) {
-      // Mutual follows → warm gold-amber line (stands out from one-way/random)
-      const alpha = (0.24 + 0.13*pulse).toFixed(2);
-      ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
-      ctx.lineWidth   = 1.4;
-      ctx.strokeStyle = `rgba(240,195,80,${alpha})`;
-      ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = gr; ctx.stroke();
     } else {
-      // One-way follow or random connection — pulsing blue-white
       const alpha = (0.18 + 0.10*pulse).toFixed(2);
       ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
       ctx.lineWidth   = 1.0;
@@ -500,7 +355,6 @@ function drawAllEdges() {
     }
   });
 }
-
 // ── Node ──────────────────────────────────────────────────────────────────────
 function drawNode(n, idx) {
   const hov  = hoveredIdx===idx;
@@ -508,8 +362,6 @@ function drawNode(n, idx) {
   const r    = n.radius*(hov ? 1.4 : pulse);
   const key  = n.name.replace('\n',' ');
   const img  = imgCache[key];
-
-  // Glow halo — gradient only for hovered node; flat fill for others (saves ~31 gradient objects/frame)
   ctx.beginPath(); ctx.arc(n.x,n.y,r*1.7,0,Math.PI*2);
   if (hov) {
     const grd = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*1.7);
@@ -520,29 +372,22 @@ function drawNode(n, idx) {
     ctx.fillStyle = n.cat.glow.replace('0.4','0.10');
   }
   ctx.fill();
-
-  // Solid black backdrop so nodes fully occlude one another
   ctx.beginPath(); ctx.arc(n.x,n.y,r+1,0,Math.PI*2);
   ctx.fillStyle='#000'; ctx.fill();
-
-  // Circle
   ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
   if (img && img !== 'loading') {
     ctx.fillStyle='#111'; ctx.fill();
     ctx.save();
     ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.clip();
-    // crop photo to square, center it
     const iw=img.width, ih=img.height;
     const side=Math.min(iw,ih);
     const sx=(iw-side)/2, sy=(ih-side)/2;
     ctx.drawImage(img, sx,sy,side,side, n.x-r,n.y-r,r*2,r*2);
     ctx.restore();
   } else {
-    // Colored gradient fallback
     const nd = ctx.createRadialGradient(n.x-r*0.3,n.y-r*0.3,0,n.x,n.y,r);
     nd.addColorStop(0,'#fff'); nd.addColorStop(0.3,n.cat.color); nd.addColorStop(1,n.cat.color+'44');
     ctx.fillStyle=nd; ctx.fill();
-    // Initials
     const init = n.name.replace('\n',' ').split(' ').filter(w=>w.length).slice(0,2).map(w=>w[0].toUpperCase()).join('');
     ctx.save();
     ctx.font=`bold ${Math.round(r*0.68)}px 'Segoe UI',Arial`;
@@ -550,36 +395,27 @@ function drawNode(n, idx) {
     ctx.fillText(init, n.x, n.y);
     ctx.restore();
   }
-
-  // Ring border
   ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
   ctx.strokeStyle = hov ? n.cat.color : n.cat.color+'66';
   ctx.lineWidth = hov?2.5:1.2; ctx.stroke();
-
-  // Name + org label — skip shadow blur for non-hovered (shadowBlur is GPU-expensive)
   ctx.save();
   ctx.textAlign='center'; ctx.textBaseline='top';
   if (hov) { ctx.shadowColor=n.cat.color; ctx.shadowBlur=14; }
-
   const fs = hov?13:10.5;
   ctx.font=`${hov?700:600} ${fs}px 'Segoe UI',Arial`;
   ctx.fillStyle=hov?'#fff':'#ddeeff';
   const nameLines = n.name.split('\n');
   const ly = n.y + r + 5;
   nameLines.forEach((line,li) => ctx.fillText(line, n.x, ly + li*(fs+2)));
-
-  // Org line — category color, slightly smaller
   const orgY = ly + nameLines.length*(fs+2) + 1;
   const ofs = hov?11:9;
   ctx.font=`500 ${ofs}px 'Segoe UI',Arial`;
   ctx.fillStyle = n.cat.color;
   if (hov) ctx.shadowBlur = 8;
   ctx.fillText(n.org, n.x, orgY);
-
   ctx.restore();
 }
-
-// ── Background pre-render — drawn once to offscreen canvas, blit each frame ───
+// ── Background pre-render ──────────────────────────────────────────────────────
 let bgCanvas = null;
 function ensureBg() {
   if (bgCanvas && bgCanvas.width === W && bgCanvas.height === H) return;
@@ -590,38 +426,28 @@ function ensureBg() {
   gr.addColorStop(0,'#0a1525'); gr.addColorStop(1,'#050a1a');
   bc.fillStyle = gr; bc.fillRect(0,0,W,H);
 }
-
 // ── Render loop ───────────────────────────────────────────────────────────────
 let frameCount   = 0;
 let lastFrameTs  = 0;
-const FRAME_MS   = 1000 / 30; // cap at 30fps
-
+const FRAME_MS   = 1000 / 30;
 function frame(ts) {
-  requestAnimationFrame(frame); // FIRST — loop survives any error below
+  requestAnimationFrame(frame);
   const elapsed = ts - lastFrameTs;
-  if (elapsed < FRAME_MS) return; // skip if too soon
+  if (elapsed < FRAME_MS) return;
   lastFrameTs = ts;
   frameCount++;
   time = ts;
-
   try {
-    // dt normalised to 60fps-equivalent so orbit speed is frame-rate-independent
     const dt = Math.min(elapsed, 50) / 16.667;
-
     ensureBg();
-    ctx.drawImage(bgCanvas, 0, 0); // single hardware blit — no per-frame gradient
-
+    ctx.drawImage(bgCanvas, 0, 0);
     drawStars();
-
     const md = Math.min(W,H);
-    // Advance orbital angles (time-based so speed is consistent at any fps)
     nodeState.forEach(n => {
       n.baseAngle += n.speed * dt;
       n.x = cx + n.r*Math.cos(n.baseAngle);
       n.y = cy + n.r*Math.sin(n.baseAngle);
     });
-
-    // Repulsion — every 4th rendered frame
     if (frameCount % 4 === 0) {
       const MIN_NODE_DIST = 72;
       const REPULSE = 0.000072;
@@ -639,7 +465,6 @@ function frame(ts) {
         }
       }
     }
-
     drawOrbitRing(md*0.27,0.08);
     drawOrbitRing(md*0.44,0.06);
     drawAllEdges();
@@ -649,7 +474,6 @@ function frame(ts) {
     console.error('[frame]', e);
   }
 }
-
 // ── Mouse ─────────────────────────────────────────────────────────────────────
 canvas.addEventListener('mousemove',e=>{
   const rect=canvas.getBoundingClientRect();
@@ -677,18 +501,14 @@ canvas.addEventListener('mousemove',e=>{
 });
 canvas.addEventListener('mouseleave',()=>{hoveredIdx=-1;tip.style.opacity='0';});
 window.addEventListener('resize',resize);
-
 // ── Tweet system ──────────────────────────────────────────────────────────────
-
 const WORKER_URL     = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
-const FETCH_INTERVAL = 5 * 60 * 1000;       // refresh tweets every 5 min
-const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000;  // ignore tweets older than 5 hours
-const STACK_SIZE     = 3;                    // max cards visible at once
-const CYCLE_INTERVAL = 9000;                 // new tweet slides in every 9s
-
-const tweetCache = {};  // handle → tweet object
-let   tweetQueue  = []; // shuffled nodeState indices to cycle through
-
+const FETCH_INTERVAL = 5 * 60 * 1000;
+const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000;
+const STACK_SIZE     = 3;
+const CYCLE_INTERVAL = 9000;
+const tweetCache = {};
+let   tweetQueue  = [];
 async function fetchTweets() {
   const handles = nodes.map(n => n.tw).filter(Boolean);
   if (!WORKER_URL.includes('YOUR-SUBDOMAIN')) {
@@ -699,7 +519,6 @@ async function fetchTweets() {
       const data = await res.json();
       Object.assign(tweetCache, data);
       console.log(`[tweets] loaded ${Object.keys(data).length} tweets`);
-      // Seed queue with nodes that have tweets newer than 5 hours
       const now = Date.now();
       tweetQueue = nodeState
         .map((_,i)=>i)
@@ -709,7 +528,6 @@ async function fetchTweets() {
           return (now - new Date(tweet.created).getTime()) < MAX_TWEET_AGE;
         })
         .sort((a, b) => {
-          // Sort oldest→newest so each new card inserted at top is more recent than those below
           const tA = new Date(tweetCache[nodeState[a]?.tw?.toLowerCase()]?.created || 0);
           const tB = new Date(tweetCache[nodeState[b]?.tw?.toLowerCase()]?.created || 0);
           return tA - tB;
@@ -719,7 +537,6 @@ async function fetchTweets() {
     }
   }
 }
-
 function timeAgo(isoStr) {
   const diff = (Date.now() - new Date(isoStr)) / 1000;
   if (diff < 60)   return `${Math.floor(diff)}s ago`;
@@ -727,12 +544,9 @@ function timeAgo(isoStr) {
   if (diff < 86400)return `${Math.floor(diff/3600)}h ago`;
   return `${Math.floor(diff/86400)}d ago`;
 }
-
 function truncate(text, max=160) {
   return text.length > max ? text.slice(0, max).trimEnd() + '…' : text;
 }
-
-// Build a card DOM element for a given node + tweet — pure DOM, no innerHTML
 function buildCard(n, tweet, nodeIdx) {
   const card = document.createElement('div');
   card.className = 'tweet-card entering';
@@ -740,15 +554,11 @@ function buildCard(n, tweet, nodeIdx) {
   card.dataset.catColor = n.cat.color;
   card.style.borderColor = n.cat.color + '88';
   card.style.boxShadow   = `0 0 20px ${n.cat.color}33, 0 4px 24px rgba(0,0,0,0.6)`;
-
-  // Sanitise all incoming data
   const likes    = Number(tweet.likes    ?? 0);
   const retweets = Number(tweet.retweets ?? 0);
   const name     = String(tweet.name     || n.name.replace('\n',' '));
   const handle   = String(tweet.handle   || n.tw || '');
   const text     = truncate(String(tweet.text || ''));
-
-  // Avatar — img element (safe src attr) or lettered placeholder
   let avatar;
   const avatarSrc = tweet.avatar ? String(tweet.avatar) : '';
   if (avatarSrc && /^https?:\/\//.test(avatarSrc)) {
@@ -763,42 +573,30 @@ function buildCard(n, tweet, nodeIdx) {
     avatar.style.background = n.cat.color;
     avatar.textContent = name[0] || '?';
   }
-
   const metaName   = document.createElement('span'); metaName.className   = 'tc-name';   metaName.textContent = name;
   const metaHandle = document.createElement('span'); metaHandle.className = 'tc-handle'; metaHandle.textContent = '@' + handle;
   const meta = document.createElement('div'); meta.className = 'tc-meta';
   meta.appendChild(metaName); meta.appendChild(metaHandle);
-
   const header = document.createElement('div'); header.className = 'tc-header';
   header.appendChild(avatar); header.appendChild(meta);
-
   const body = document.createElement('div'); body.className = 'tc-text';
   body.textContent = text;
-
   const likesEl    = document.createElement('span'); likesEl.textContent    = '♥ ' + likes.toLocaleString();
   const rtEl       = document.createElement('span'); rtEl.textContent       = '↺ ' + retweets.toLocaleString();
   const timeEl     = document.createElement('span'); timeEl.className       = 'tc-time'; timeEl.textContent = timeAgo(tweet.created);
   const footer = document.createElement('div'); footer.className = 'tc-footer';
   footer.appendChild(likesEl); footer.appendChild(rtEl); footer.appendChild(timeEl);
-
   card.appendChild(header); card.appendChild(body); card.appendChild(footer);
   return card;
 }
-
-// ── Live connecting lines: node → tweet card ──────────────────────────────────
-// Runs on its own 100ms interval (NOT inside the rAF loop) so it never
-// blocks or crashes the canvas animation.
-const tweetLineMap = new Map(); // card el → { path, dot }
-
+// ── Live connecting lines ──────────────────────────────────────────────────────
+const tweetLineMap = new Map();
 function updateTweetLines() {
   try {
     const svg   = document.getElementById('tweetLines');
     const stack = document.getElementById('tweetStack');
     if (!svg || !stack) return;
-
     const cards = Array.from(stack.children);
-
-    // 1. Clean up SVG elements for cards that have left the DOM
     const toDelete = [];
     for (const [card, els] of tweetLineMap) {
       if (!stack.contains(card)) toDelete.push([card, els]);
@@ -807,10 +605,7 @@ function updateTweetLines() {
       els.path.remove(); els.dot.remove();
       tweetLineMap.delete(card);
     });
-
     if (!cards.length) return;
-
-    // 2. Create persistent SVG elements for cards that just entered
     cards.forEach(card => {
       if (tweetLineMap.has(card)) return;
       const color = card.dataset.catColor || '#f0a500';
@@ -826,24 +621,19 @@ function updateTweetLines() {
       svg.appendChild(dot);
       tweetLineMap.set(card, { path, dot });
     });
-
-    // 3. Update positions — getBoundingClientRect is safe here (not in rAF)
     cards.forEach(card => {
       const nodeIdx = parseInt(card.dataset.nodeIdx);
       if (isNaN(nodeIdx)) return;
       const node = nodeState[nodeIdx]; if (!node) return;
       const els  = tweetLineMap.get(card); if (!els) return;
-
       if (card.classList.contains('entering') || card.classList.contains('exiting')) {
         els.path.setAttribute('stroke-opacity', '0');
         els.dot.setAttribute('fill-opacity', '0');
         return;
       }
-
       const rect = card.getBoundingClientRect();
       const ex = rect.left, ey = rect.top + rect.height * 0.5;
       const mx = (node.x + ex) * 0.5;
-
       els.path.setAttribute('d', `M ${node.x} ${node.y} Q ${mx} ${node.y} ${ex} ${ey}`);
       els.path.setAttribute('stroke-opacity', '0.5');
       els.dot.setAttribute('cx', node.x);
@@ -854,33 +644,26 @@ function updateTweetLines() {
     console.warn('[tweetLines]', e);
   }
 }
-
 // Push next tweet to the top of the right-side stack
 function cycleTweets() {
   try {
     if (tweetQueue.length === 0) return;
-
     const nodeIdx = tweetQueue.shift();
-    tweetQueue.push(nodeIdx); // rotate to back
-
+    tweetQueue.push(nodeIdx);
     const n = nodeState[nodeIdx];
     if (!n) return;
     const tweet = tweetCache[n.tw?.toLowerCase()];
     if (!tweet) return;
-
-    // Guard against malformed/missing created date
     const created = new Date(tweet.created);
     const age     = Date.now() - created.getTime();
     if (isNaN(age) || age >= MAX_TWEET_AGE) return;
-
     const stack = document.getElementById('tweetStack');
     if (!stack) return;
     const card = buildCard(n, tweet, nodeIdx);
-
     stack.insertBefore(card, stack.firstChild);
     requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('entering')));
-
-    while (stack.children.length > STACK_SIZE) {
+    // ── FIX: was `while` — caused infinite loop since oldest.remove() is async ──
+    if (stack.children.length > STACK_SIZE) {
       const oldest = stack.lastChild;
       oldest.classList.add('exiting');
       setTimeout(() => oldest.remove(), 380);
@@ -889,22 +672,14 @@ function cycleTweets() {
     console.warn('[cycleTweets]', e);
   }
 }
-
 // ── Boot ──────────────────────────────────────────────────────────────────────
 resize();
 requestAnimationFrame(frame);
 loadAllImages();
-setInterval(updateTweetLines, 100); // run SVG line updates at 10fps, separate from rAF
-
-// Load tweets then start cycling the stack
+setInterval(updateTweetLines, 100);
 fetchTweets().then(() => {
   if (tweetQueue.length === 0) return;
-
   const stack = document.getElementById('tweetStack');
-
-  // Seed with the 3 most recent tweets immediately (no animation).
-  // tweetQueue is sorted oldest→newest, so the last STACK_SIZE entries are
-  // the freshest.  Insert oldest-of-the-three first so newest ends up on top.
   const seedCount = Math.min(STACK_SIZE, tweetQueue.length);
   tweetQueue.slice(-seedCount).forEach(nodeIdx => {
     const n = nodeState[nodeIdx]; if (!n) return;
@@ -912,11 +687,9 @@ fetchTweets().then(() => {
     const seedAge = Date.now() - new Date(tweet.created).getTime();
     if (isNaN(seedAge) || seedAge >= MAX_TWEET_AGE) return;
     const card = buildCard(n, tweet, nodeIdx);
-    card.classList.remove('entering'); // skip entrance animation for initial seed
+    card.classList.remove('entering');
     stack.insertBefore(card, stack.firstChild);
   });
-
-  // Then keep cycling normally
   setInterval(cycleTweets, CYCLE_INTERVAL);
 });
 setInterval(fetchTweets, FETCH_INTERVAL);
