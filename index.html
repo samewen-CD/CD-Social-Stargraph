@@ -252,6 +252,7 @@ function resize() {
   W = canvas.width  = window.innerWidth;
   H = canvas.height = window.innerHeight;
   cx = W/2; cy = H/2;
+  bgCanvas = null; // invalidate cached background
   computeLayout();
   positionLogo();
 }
@@ -426,11 +427,11 @@ function drawCenter() {
   const pulse  = 1 + 0.03*Math.sin(time*0.002);
   const baseR  = Math.min(W,H)*0.062*pulse;
 
-  // Pulsing glow layers
-  [0.03,0.065,0.13,0.22].forEach((a,i) => {
-    const gr = ctx.createRadialGradient(cx,cy,0,cx,cy,baseR*(2.7-i*0.4));
+  // Pulsing glow — 2 layers instead of 4 (halves gradient creation cost)
+  [0.065, 0.22].forEach((a,i) => {
+    const gr = ctx.createRadialGradient(cx,cy,0,cx,cy,baseR*(2.7-i*0.8));
     gr.addColorStop(0,`rgba(240,165,0,${a})`); gr.addColorStop(1,'transparent');
-    ctx.beginPath(); ctx.arc(cx,cy,baseR*(2.7-i*0.4),0,Math.PI*2);
+    ctx.beginPath(); ctx.arc(cx,cy,baseR*(2.7-i*0.8),0,Math.PI*2);
     ctx.fillStyle=gr; ctx.fill();
   });
 
@@ -578,54 +579,75 @@ function drawNode(n, idx) {
   ctx.restore();
 }
 
+// ── Background pre-render — drawn once to offscreen canvas, blit each frame ───
+let bgCanvas = null;
+function ensureBg() {
+  if (bgCanvas && bgCanvas.width === W && bgCanvas.height === H) return;
+  bgCanvas = document.createElement('canvas');
+  bgCanvas.width = W; bgCanvas.height = H;
+  const bc = bgCanvas.getContext('2d');
+  const gr = bc.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W,H)*0.8);
+  gr.addColorStop(0,'#0a1525'); gr.addColorStop(1,'#050a1a');
+  bc.fillStyle = gr; bc.fillRect(0,0,W,H);
+}
+
 // ── Render loop ───────────────────────────────────────────────────────────────
-let frameCount = 0;
+let frameCount   = 0;
+let lastFrameTs  = 0;
+const FRAME_MS   = 1000 / 30; // cap at 30fps
+
 function frame(ts) {
-  requestAnimationFrame(frame); // schedule FIRST — errors below can never kill the loop
+  requestAnimationFrame(frame); // FIRST — loop survives any error below
+  const elapsed = ts - lastFrameTs;
+  if (elapsed < FRAME_MS) return; // skip if too soon
+  lastFrameTs = ts;
   frameCount++;
-  time=ts;
-  ctx.clearRect(0,0,W,H);
-  const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*0.8);
-  bg.addColorStop(0,'#0a1525'); bg.addColorStop(1,'#050a1a');
-  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  time = ts;
 
-  drawStars();
+  try {
+    // dt normalised to 60fps-equivalent so orbit speed is frame-rate-independent
+    const dt = Math.min(elapsed, 50) / 16.667;
 
-  const md=Math.min(W,H);
-  // Advance orbital angles
-  nodeState.forEach(n => {
-    n.baseAngle += n.speed;
-    n.x = cx + n.r*Math.cos(n.baseAngle);
-    n.y = cy + n.r*Math.sin(n.baseAngle);
-  });
+    ensureBg();
+    ctx.drawImage(bgCanvas, 0, 0); // single hardware blit — no per-frame gradient
 
-  // Soft repulsion — run every 4th frame only (31 nodes = 465 checks/frame → 116/frame)
-  if (frameCount % 4 === 0) {
-    const MIN_NODE_DIST = 72;
-    const REPULSE = 0.000072; // 4× stronger per run to compensate for less frequent calls
-    for (let i = 0; i < nodeState.length; i++) {
-      for (let j = i+1; j < nodeState.length; j++) {
-        const a = nodeState[i], b = nodeState[j];
-        const dx = b.x - a.x, dy = b.y - a.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < MIN_NODE_DIST && dist > 0) {
-          const force = (MIN_NODE_DIST - dist) / MIN_NODE_DIST * REPULSE;
-          a.baseAngle -= force;
-          b.baseAngle += force;
-          a.x = cx + a.r*Math.cos(a.baseAngle);
-          a.y = cy + a.r*Math.sin(a.baseAngle);
-          b.x = cx + b.r*Math.cos(b.baseAngle);
-          b.y = cy + b.r*Math.sin(b.baseAngle);
+    drawStars();
+
+    const md = Math.min(W,H);
+    // Advance orbital angles (time-based so speed is consistent at any fps)
+    nodeState.forEach(n => {
+      n.baseAngle += n.speed * dt;
+      n.x = cx + n.r*Math.cos(n.baseAngle);
+      n.y = cy + n.r*Math.sin(n.baseAngle);
+    });
+
+    // Repulsion — every 4th rendered frame
+    if (frameCount % 4 === 0) {
+      const MIN_NODE_DIST = 72;
+      const REPULSE = 0.000072;
+      for (let i = 0; i < nodeState.length; i++) {
+        for (let j = i+1; j < nodeState.length; j++) {
+          const a = nodeState[i], b = nodeState[j];
+          const dx = b.x-a.x, dy = b.y-a.y;
+          const dist = Math.sqrt(dx*dx+dy*dy);
+          if (dist < MIN_NODE_DIST && dist > 0) {
+            const force = (MIN_NODE_DIST-dist)/MIN_NODE_DIST*REPULSE;
+            a.baseAngle -= force; b.baseAngle += force;
+            a.x = cx+a.r*Math.cos(a.baseAngle); a.y = cy+a.r*Math.sin(a.baseAngle);
+            b.x = cx+b.r*Math.cos(b.baseAngle); b.y = cy+b.r*Math.sin(b.baseAngle);
+          }
         }
       }
     }
-  }
 
-  drawOrbitRing(md*0.27,0.08);
-  drawOrbitRing(md*0.44,0.06);
-  drawAllEdges();
-  nodeState.forEach((n,i)=>drawNode(n,i));
-  drawCenter();
+    drawOrbitRing(md*0.27,0.08);
+    drawOrbitRing(md*0.44,0.06);
+    drawAllEdges();
+    nodeState.forEach((n,i)=>drawNode(n,i));
+    drawCenter();
+  } catch(e) {
+    console.error('[frame]', e);
+  }
 }
 
 // ── Mouse ─────────────────────────────────────────────────────────────────────
@@ -710,7 +732,7 @@ function truncate(text, max=160) {
   return text.length > max ? text.slice(0, max).trimEnd() + '…' : text;
 }
 
-// Build a card DOM element for a given node + tweet
+// Build a card DOM element for a given node + tweet — pure DOM, no innerHTML
 function buildCard(n, tweet, nodeIdx) {
   const card = document.createElement('div');
   card.className = 'tweet-card entering';
@@ -719,37 +741,47 @@ function buildCard(n, tweet, nodeIdx) {
   card.style.borderColor = n.cat.color + '88';
   card.style.boxShadow   = `0 0 20px ${n.cat.color}33, 0 4px 24px rgba(0,0,0,0.6)`;
 
-  // Guard numeric fields — Worker may return null/undefined
+  // Sanitise all incoming data
   const likes    = Number(tweet.likes    ?? 0);
   const retweets = Number(tweet.retweets ?? 0);
   const name     = String(tweet.name     || n.name.replace('\n',' '));
   const handle   = String(tweet.handle   || n.tw || '');
+  const text     = truncate(String(tweet.text || ''));
 
-  // Build structure via innerHTML for layout; set unsafe text via textContent
-  const avatarHtml = tweet.avatar
-    ? `<img class="tc-avatar" src="${tweet.avatar}" alt="" crossorigin="anonymous"/>`
-    : `<div class="tc-avatar-placeholder" style="background:${n.cat.color}">${name[0]}</div>`;
+  // Avatar — img element (safe src attr) or lettered placeholder
+  let avatar;
+  const avatarSrc = tweet.avatar ? String(tweet.avatar) : '';
+  if (avatarSrc && /^https?:\/\//.test(avatarSrc)) {
+    avatar = document.createElement('img');
+    avatar.className = 'tc-avatar';
+    avatar.alt = '';
+    avatar.crossOrigin = 'anonymous';
+    avatar.src = avatarSrc;
+  } else {
+    avatar = document.createElement('div');
+    avatar.className = 'tc-avatar-placeholder';
+    avatar.style.background = n.cat.color;
+    avatar.textContent = name[0] || '?';
+  }
 
-  card.innerHTML = `
-    <div class="tc-header">
-      ${avatarHtml}
-      <div class="tc-meta">
-        <span class="tc-name"></span>
-        <span class="tc-handle"></span>
-      </div>
-    </div>
-    <div class="tc-text"></div>
-    <div class="tc-footer">
-      <span>♥ ${likes.toLocaleString()}</span>
-      <span>↺ ${retweets.toLocaleString()}</span>
-      <span class="tc-time">${timeAgo(tweet.created)}</span>
-    </div>`;
+  const metaName   = document.createElement('span'); metaName.className   = 'tc-name';   metaName.textContent = name;
+  const metaHandle = document.createElement('span'); metaHandle.className = 'tc-handle'; metaHandle.textContent = '@' + handle;
+  const meta = document.createElement('div'); meta.className = 'tc-meta';
+  meta.appendChild(metaName); meta.appendChild(metaHandle);
 
-  // Set user-supplied text safely (prevents HTML injection)
-  card.querySelector('.tc-name').textContent   = name;
-  card.querySelector('.tc-handle').textContent = '@' + handle;
-  card.querySelector('.tc-text').textContent   = truncate(String(tweet.text || ''));
+  const header = document.createElement('div'); header.className = 'tc-header';
+  header.appendChild(avatar); header.appendChild(meta);
 
+  const body = document.createElement('div'); body.className = 'tc-text';
+  body.textContent = text;
+
+  const likesEl    = document.createElement('span'); likesEl.textContent    = '♥ ' + likes.toLocaleString();
+  const rtEl       = document.createElement('span'); rtEl.textContent       = '↺ ' + retweets.toLocaleString();
+  const timeEl     = document.createElement('span'); timeEl.className       = 'tc-time'; timeEl.textContent = timeAgo(tweet.created);
+  const footer = document.createElement('div'); footer.className = 'tc-footer';
+  footer.appendChild(likesEl); footer.appendChild(rtEl); footer.appendChild(timeEl);
+
+  card.appendChild(header); card.appendChild(body); card.appendChild(footer);
   return card;
 }
 
@@ -877,7 +909,8 @@ fetchTweets().then(() => {
   tweetQueue.slice(-seedCount).forEach(nodeIdx => {
     const n = nodeState[nodeIdx]; if (!n) return;
     const tweet = tweetCache[n.tw?.toLowerCase()]; if (!tweet) return;
-    if ((Date.now() - new Date(tweet.created).getTime()) >= MAX_TWEET_AGE) return;
+    const seedAge = Date.now() - new Date(tweet.created).getTime();
+    if (isNaN(seedAge) || seedAge >= MAX_TWEET_AGE) return;
     const card = buildCard(n, tweet, nodeIdx);
     card.classList.remove('entering'); // skip entrance animation for initial seed
     stack.insertBefore(card, stack.firstChild);
