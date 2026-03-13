@@ -506,7 +506,6 @@ const WORKER_URL     = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
 const FETCH_INTERVAL = 2 * 60 * 1000;
 const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000;
 const STACK_SIZE     = 3;
-const CYCLE_INTERVAL = 9000;
 const tweetCache = {};
 let   tweetQueue  = [];
 async function fetchTweets() {
@@ -532,6 +531,7 @@ async function fetchTweets() {
           const tB = new Date(tweetCache[nodeState[b]?.tw?.toLowerCase()]?.created || 0);
           return tB - tA; // newest first
         });
+      refreshStack(); // update stack with any new tweets
     } catch(e) {
       console.warn('[tweets] fetch failed:', e);
     }
@@ -644,32 +644,45 @@ function updateTweetLines() {
     console.warn('[tweetLines]', e);
   }
 }
-// Push next tweet to the top of the right-side stack
-function cycleTweets() {
+// Refresh the stack after a fetch — only adds genuinely new tweets, never cycles on a timer
+let stackInitialized = false;
+function refreshStack() {
   try {
-    if (tweetQueue.length === 0) return;
-    const nodeIdx = tweetQueue.shift();
-    tweetQueue.push(nodeIdx);
-    const n = nodeState[nodeIdx];
-    if (!n) return;
-    const tweet = tweetCache[n.tw?.toLowerCase()];
-    if (!tweet) return;
-    const created = new Date(tweet.created);
-    const age     = Date.now() - created.getTime();
-    if (isNaN(age) || age >= MAX_TWEET_AGE) return;
     const stack = document.getElementById('tweetStack');
-    if (!stack) return;
-    const card = buildCard(n, tweet, nodeIdx);
-    stack.insertBefore(card, stack.firstChild);
-    requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('entering')));
-    // ── FIX: was `while` — caused infinite loop since oldest.remove() is async ──
-    if (stack.children.length > STACK_SIZE) {
-      const oldest = stack.lastChild;
-      oldest.classList.add('exiting');
-      setTimeout(() => oldest.remove(), 380);
-    }
+    if (!stack || tweetQueue.length === 0) return;
+
+    const topIndices   = tweetQueue.slice(0, STACK_SIZE);
+    const shownIndices = new Set(
+      Array.from(stack.children).map(c => parseInt(c.dataset.nodeIdx))
+    );
+
+    // Only add tweets not already visible
+    const toAdd = topIndices.filter(i => !shownIndices.has(i));
+    if (toAdd.length === 0) return;
+
+    // Insert oldest-of-new first so the newest ends up on top
+    [...toAdd].reverse().forEach(nodeIdx => {
+      const n = nodeState[nodeIdx]; if (!n) return;
+      const tweet = tweetCache[n.tw?.toLowerCase()]; if (!tweet) return;
+      const age = Date.now() - new Date(tweet.created).getTime();
+      if (isNaN(age) || age >= MAX_TWEET_AGE) return;
+      const card = buildCard(n, tweet, nodeIdx);
+      if (!stackInitialized) card.classList.remove('entering'); // no animation on first load
+      stack.insertBefore(card, stack.firstChild);
+      if (stackInitialized) {
+        requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('entering')));
+      }
+    });
+
+    stackInitialized = true;
+
+    // Remove overflow from bottom — collect first to avoid async length issues
+    Array.from(stack.children).slice(STACK_SIZE).forEach(card => {
+      card.classList.add('exiting');
+      setTimeout(() => card.remove(), 380);
+    });
   } catch(e) {
-    console.warn('[cycleTweets]', e);
+    console.warn('[refreshStack]', e);
   }
 }
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -677,22 +690,7 @@ resize();
 requestAnimationFrame(frame);
 loadAllImages();
 setInterval(updateTweetLines, 100);
-fetchTweets().then(() => {
-  if (tweetQueue.length === 0) return;
-  const stack = document.getElementById('tweetStack');
-  const seedCount = Math.min(STACK_SIZE, tweetQueue.length);
-  // tweetQueue is newest→oldest; take first seedCount, insert oldest-of-them first so newest ends on top
-  tweetQueue.slice(0, seedCount).reverse().forEach(nodeIdx => {
-    const n = nodeState[nodeIdx]; if (!n) return;
-    const tweet = tweetCache[n.tw?.toLowerCase()]; if (!tweet) return;
-    const seedAge = Date.now() - new Date(tweet.created).getTime();
-    if (isNaN(seedAge) || seedAge >= MAX_TWEET_AGE) return;
-    const card = buildCard(n, tweet, nodeIdx);
-    card.classList.remove('entering');
-    stack.insertBefore(card, stack.firstChild);
-  });
-  setInterval(cycleTweets, CYCLE_INTERVAL);
-});
+fetchTweets(); // initial fetch — refreshStack() is called inside fetchTweets after queue is built
 setInterval(fetchTweets, FETCH_INTERVAL);
 </script>
 </body>
