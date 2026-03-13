@@ -80,9 +80,6 @@
   <div class="li"><div class="ld" style="background:#00d4ff"></div>Crypto Industry</div>
   <div class="li"><div class="ld" style="background:#b060ff"></div>Finance / Investing</div>
   <div class="li"><div class="ld" style="background:#ff6b6b"></div>Tech / Media</div>
-  <div style="color:#f0a500;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-top:10px;margin-bottom:3px">CONNECTIONS</div>
-  <div class="li"><div style="width:20px;height:2px;background:rgba(240,195,80,0.7);border-radius:1px;flex-shrink:0"></div>Mutual follows</div>
-  <div class="li"><div style="width:20px;height:1px;background:rgba(180,200,255,0.45);border-radius:1px;flex-shrink:0"></div>Follows</div>
 </div>
 <div id="loading">Loading photos…</div>
 
@@ -642,31 +639,6 @@ const CARD_DUR       = 7;             // seconds each card stays visible
 const FETCH_INTERVAL = 5 * 60 * 1000; // refresh every 5 min
 const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000; // 5 hours in ms
 
-// ── Follow graph (real Twitter connections) ────────────────────────────────
-async function fetchFollowGraph() {
-  if (WORKER_URL.includes('YOUR-SUBDOMAIN')) return;
-  const handles = nodes.map(n => n.tw).filter(Boolean);
-  try {
-    const res = await fetch(`${WORKER_URL}/follows?handles=${handles.join(',')}`);
-    if (!res.ok) { console.warn('[follows] HTTP', res.status); return; }
-    const graph = await res.json();
-    if (graph.error) { console.warn('[follows] error:', graph.error); return; }
-
-    const edgeCount = Object.values(graph).reduce((s, a) => s + a.length, 0);
-    console.log(`[follows] received graph for ${Object.keys(graph).length} users, ${edgeCount} raw edges`);
-
-    if (edgeCount > 0) {
-      buildFollowEdges(graph);
-      // Flash a status message so users know the graph is live
-      loadEl.style.opacity = '1';
-      loadEl.textContent   = `Live follow graph: ${peerEdges.length} connections (${peerEdges.filter(e=>e.mutual).length} mutual)`;
-      setTimeout(() => { loadEl.style.opacity = '0'; }, 4000);
-    }
-  } catch(e) {
-    console.warn('[follows] fetch failed:', e);
-  }
-}
-
 async function fetchTweets() {
   const handles = nodes.map(n => n.tw).filter(Boolean);
   if (!WORKER_URL.includes('YOUR-SUBDOMAIN')) {
@@ -789,10 +761,6 @@ function tickTweetQueue() {
 resize();
 requestAnimationFrame(frame);
 loadAllImages();
-
-// Load follow graph early — it replaces random edges once data arrives.
-// Runs once; no need to refresh frequently (cached 6h on worker).
-fetchFollowGraph();
 
 // Load tweets on a repeating interval
 fetchTweets().then(() => setTimeout(tickTweetQueue, 3000));
