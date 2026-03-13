@@ -25,22 +25,37 @@
       color:rgba(240,165,0,0.6);font-size:11px;letter-spacing:2px;
       text-transform:uppercase;transition:opacity 0.6s;white-space:nowrap;
     }
-    /* ── Tweet cards ────────────────────────────────────────────────────── */
-    .tweet-card {
+    /* ── Tweet stack (right side feed) ──────────────────────────────────── */
+    #tweetStack {
       position: absolute;
-      width: 240px;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      width: 258px;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .tweet-card {
       background: rgba(6, 14, 35, 0.96);
       border: 1px solid rgba(240,165,0,0.45);
       border-radius: 12px;
       padding: 11px 13px 10px;
-      pointer-events: none;
       box-shadow: 0 0 20px rgba(240,165,0,0.18), 0 4px 24px rgba(0,0,0,0.6);
-      animation: tweetIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards,
-                 tweetOut 0.4s ease-in var(--dur, 7s) forwards;
-      z-index: 100;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.35s ease, transform 0.35s ease;
     }
-    @keyframes tweetIn  { from { opacity:0; transform:scale(0.8) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
-    @keyframes tweetOut { from { opacity:1; transform:translateY(0);  } to { opacity:0; transform:translateY(-10px); } }
+    .tweet-card.entering {
+      opacity: 0;
+      transform: translateY(-14px);
+    }
+    .tweet-card.exiting {
+      opacity: 0;
+      transform: translateY(10px);
+    }
     .tweet-card .tc-header { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
     .tweet-card .tc-avatar { width:30px; height:30px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(240,165,0,0.4); }
     .tweet-card .tc-avatar-placeholder { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#000; }
@@ -81,6 +96,7 @@
   <div class="li"><div class="ld" style="background:#b060ff"></div>Finance / Investing</div>
   <div class="li"><div class="ld" style="background:#ff6b6b"></div>Tech / Media</div>
 </div>
+<div id="tweetStack"></div>
 <div id="loading">Loading photos…</div>
 
 <script>
@@ -627,17 +643,14 @@ window.addEventListener('resize',resize);
 
 // ── Tweet system ──────────────────────────────────────────────────────────────
 
-// ▶ SET THIS to your Cloudflare Worker URL after deploying
-const WORKER_URL = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
+const WORKER_URL     = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
+const FETCH_INTERVAL = 5 * 60 * 1000;       // refresh tweets every 5 min
+const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000;  // ignore tweets older than 5 hours
+const STACK_SIZE     = 3;                    // max cards visible at once
+const CYCLE_INTERVAL = 9000;                 // new tweet slides in every 9s
 
-const tweetCache = {};        // handle → tweet object
-let   tweetQueue  = [];       // nodeState indices waiting to show card
-let   activeCards = new Set();// indices currently showing a card
-const activeCardPositions = new Map(); // nodeIdx → {x, y}
-const MAX_CARDS      = 2;             // max simultaneous cards
-const CARD_DUR       = 7;             // seconds each card stays visible
-const FETCH_INTERVAL = 5 * 60 * 1000; // refresh every 5 min
-const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000; // 5 hours in ms
+const tweetCache = {};  // handle → tweet object
+let   tweetQueue  = []; // shuffled nodeState indices to cycle through
 
 async function fetchTweets() {
   const handles = nodes.map(n => n.tw).filter(Boolean);
@@ -677,35 +690,12 @@ function truncate(text, max=160) {
   return text.length > max ? text.slice(0, max).trimEnd() + '…' : text;
 }
 
-function showTweetCard(nodeIdx) {
-  const n = nodeState[nodeIdx];
-  if (!n) return;
-  const tweet = tweetCache[n.tw?.toLowerCase()];
-  if (!tweet) return;
-  if ((Date.now() - new Date(tweet.created).getTime()) >= MAX_TWEET_AGE) return;
-
-  // Check spatial conflict with existing cards (min 280px apart)
-  const cardX = n.x + (n.x > cx ? -248 : 8);
-  const cardY = n.y - 60;
-  for (const [, pos] of activeCardPositions) {
-    const dx = cardX - pos.x, dy = cardY - pos.y;
-    if (Math.sqrt(dx*dx + dy*dy) < 280) {
-      // Too close — requeue and skip this turn
-      tweetQueue.push(nodeIdx);
-      return;
-    }
-  }
-
-  activeCards.add(nodeIdx);
-  activeCardPositions.set(nodeIdx, { x: cardX, y: cardY });
-
+// Build a card DOM element for a given node + tweet
+function buildCard(n, tweet) {
   const card = document.createElement('div');
-  card.className = 'tweet-card';
-  card.style.setProperty('--dur', `${CARD_DUR}s`);
-
-  // Color the border with node's category color
+  card.className = 'tweet-card entering';
   card.style.borderColor = n.cat.color + '88';
-  card.style.boxShadow = `0 0 20px ${n.cat.color}33, 0 4px 24px rgba(0,0,0,0.6)`;
+  card.style.boxShadow   = `0 0 20px ${n.cat.color}33, 0 4px 24px rgba(0,0,0,0.6)`;
 
   const avatarHtml = tweet.avatar
     ? `<img class="tc-avatar" src="${tweet.avatar}" alt="" crossorigin="anonymous"/>`
@@ -725,36 +715,38 @@ function showTweetCard(nodeIdx) {
       <span>↺ ${tweet.retweets.toLocaleString()}</span>
       <span class="tc-time">${timeAgo(tweet.created)}</span>
     </div>`;
-
-  // Position near the node using pre-conflict-checked coordinates
-  card.style.left = cardX + 'px';
-  card.style.top  = cardY + 'px';
-
-  document.body.appendChild(card);
-
-  // Remove after animation completes
-  const total = (CARD_DUR + 0.4) * 1000;
-  setTimeout(() => {
-    card.remove();
-    activeCards.delete(nodeIdx);
-    activeCardPositions.delete(nodeIdx);
-    // Re-queue this node at the back
-    tweetQueue.push(nodeIdx);
-  }, total);
+  return card;
 }
 
-// Drip cards out one at a time with spacing
-function tickTweetQueue() {
-  if (activeCards.size < MAX_CARDS && tweetQueue.length > 0) {
-    // Pick next node not already showing
-    const idx = tweetQueue.findIndex(i => !activeCards.has(i));
-    if (idx !== -1) {
-      const nodeIdx = tweetQueue.splice(idx, 1)[0];
-      showTweetCard(nodeIdx);
-    }
+// Push next tweet to the top of the right-side stack
+function cycleTweets() {
+  if (tweetQueue.length === 0) return;
+
+  // Grab next node index and rotate it to the back
+  const nodeIdx = tweetQueue.shift();
+  tweetQueue.push(nodeIdx);
+
+  const n = nodeState[nodeIdx];
+  if (!n) return;
+  const tweet = tweetCache[n.tw?.toLowerCase()];
+  if (!tweet) return;
+  if ((Date.now() - new Date(tweet.created).getTime()) >= MAX_TWEET_AGE) return;
+
+  const stack = document.getElementById('tweetStack');
+  const card  = buildCard(n, tweet);
+
+  // Insert at top
+  stack.insertBefore(card, stack.firstChild);
+
+  // Animate in (double-rAF ensures the entering class is rendered first)
+  requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('entering')));
+
+  // Fade out and remove the oldest card if over the limit
+  while (stack.children.length > STACK_SIZE) {
+    const oldest = stack.lastChild;
+    oldest.classList.add('exiting');
+    setTimeout(() => oldest.remove(), 380);
   }
-  // Stagger: new card every 2.5s if slots open
-  setTimeout(tickTweetQueue, 2500);
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -762,8 +754,13 @@ resize();
 requestAnimationFrame(frame);
 loadAllImages();
 
-// Load tweets on a repeating interval
-fetchTweets().then(() => setTimeout(tickTweetQueue, 3000));
+// Load tweets then start cycling the stack
+fetchTweets().then(() => {
+  if (tweetQueue.length > 0) {
+    cycleTweets(); // show first card right away
+    setInterval(cycleTweets, CYCLE_INTERVAL);
+  }
+});
 setInterval(fetchTweets, FETCH_INTERVAL);
 </script>
 </body>
