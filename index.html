@@ -671,7 +671,12 @@ async function fetchTweets() {
           if (!tweet) return false;
           return (now - new Date(tweet.created).getTime()) < MAX_TWEET_AGE;
         })
-        .sort(() => Math.random() - 0.5);
+        .sort((a, b) => {
+          // Sort oldest→newest so each new card inserted at top is more recent than those below
+          const tA = new Date(tweetCache[nodeState[a]?.tw?.toLowerCase()]?.created || 0);
+          const tB = new Date(tweetCache[nodeState[b]?.tw?.toLowerCase()]?.created || 0);
+          return tA - tB;
+        });
     } catch(e) {
       console.warn('[tweets] fetch failed:', e);
     }
