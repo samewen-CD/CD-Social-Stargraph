@@ -27,7 +27,7 @@
 
     /* ── Loading ─────────────────────────────────────────────────────────── */
     #loading{
-      position:absolute;bottom:94px;left:50%;transform:translateX(-50%);
+      position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
       color:rgba(240,165,0,0.6);font-size:11px;letter-spacing:2px;
       text-transform:uppercase;transition:opacity 0.6s;white-space:nowrap;
     }
@@ -41,59 +41,79 @@
     }
     #centerLogo img{width:80%;height:80%;object-fit:contain}
 
-    /* ── Bottom ticker ───────────────────────────────────────────────────── */
-    #ticker{
-      position:fixed;bottom:0;left:0;right:0;height:76px;
-      background:rgba(5,10,26,0.97);
-      border-top:1px solid rgba(240,165,0,0.25);
-      overflow:hidden;z-index:200;
+    /* ── Company panel (right side) ──────────────────────────────────────── */
+    #company-panel{
+      position:fixed;right:18px;top:18px;width:148px;
+      display:flex;flex-direction:column;gap:6px;z-index:100;
     }
-    .tick-card{
-      position:absolute;inset:0;
-      display:flex;align-items:center;
-      padding:0 28px;gap:14px;
-      cursor:pointer;
-      transform:translateX(110%);
-      transition:transform 0.6s cubic-bezier(0.22,1,0.36,1);
-      text-decoration:none;
+    .co-header{
+      color:#00e5aa;font-size:10px;letter-spacing:2px;
+      text-transform:uppercase;margin-bottom:2px;
     }
-    .tick-card.visible{transform:translateX(0)}
-    .tick-card.gone{transform:translateX(-110%);transition:transform 0.45s ease-in}
-
-    .tick-stripe{width:3px;height:48px;border-radius:2px;flex-shrink:0}
-
-    .tick-avatar{
-      width:44px;height:44px;border-radius:50%;
+    .co-item{
+      display:flex;align-items:center;gap:8px;
+      cursor:pointer;padding:3px 0;
+    }
+    .co-item:hover .co-name{color:#fff}
+    .co-avatar{
+      width:26px;height:26px;border-radius:50%;
       object-fit:cover;flex-shrink:0;
-      border:1.5px solid rgba(255,255,255,0.15);
+      border:1.5px solid rgba(0,229,170,0.45);
     }
-    .tick-avatar-fb{
-      width:44px;height:44px;border-radius:50%;flex-shrink:0;
+    .co-avatar-fb{
+      width:26px;height:26px;border-radius:50%;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;
-      font-weight:700;font-size:18px;color:#000;
+      font-weight:700;font-size:11px;color:#050a1a;background:#00e5aa;
     }
-    .tick-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-    .tick-nameline{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
-    .tick-name{font-size:13px;font-weight:700;color:#fff;white-space:nowrap}
-    .tick-handle{font-size:11px;white-space:nowrap}
-    .tick-text{
-      font-size:12px;color:#ccdaf0;
+    .co-name{
+      color:#aabbd4;font-size:11px;font-weight:600;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      transition:color 0.15s;
     }
-    .tick-badge{
+
+    /* ── Tweet stack (left side, below legend) ───────────────────────────── */
+    #tweet-panel{
+      position:fixed;left:18px;top:148px;
+      width:262px;display:flex;flex-direction:column;gap:5px;z-index:100;
+    }
+    .tw-card{
+      background:rgba(8,16,42,0.93);
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:8px;padding:8px 10px 8px 0;
+      display:flex;align-items:flex-start;gap:8px;
+      cursor:pointer;
+      border-left-width:3px;border-left-style:solid;
+      transform:translateY(18px);opacity:0;
+      transition:transform 0.45s cubic-bezier(0.22,1,0.36,1),opacity 0.45s;
+    }
+    .tw-card.visible{transform:translateY(0);opacity:1}
+    .tw-card.gone{transform:translateY(-18px);opacity:0;transition:transform 0.3s ease-in,opacity 0.3s}
+    .tw-av{
+      width:30px;height:30px;border-radius:50%;
+      object-fit:cover;flex-shrink:0;margin-left:8px;
+    }
+    .tw-av-fb{
+      width:30px;height:30px;border-radius:50%;flex-shrink:0;margin-left:8px;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:12px;color:#050a1a;
+    }
+    .tw-body{flex:1;min-width:0}
+    .tw-meta{display:flex;align-items:center;gap:5px;margin-bottom:3px;flex-wrap:nowrap}
+    .tw-name{font-size:11px;font-weight:700;color:#fff;white-space:nowrap}
+    .tw-handle{font-size:10px;white-space:nowrap}
+    .tw-time{font-size:10px;color:rgba(180,200,255,0.4);margin-left:auto;white-space:nowrap}
+    .tw-text{
+      font-size:11px;color:#b8cce0;
+      display:-webkit-box;-webkit-line-clamp:2;
+      -webkit-box-orient:vertical;overflow:hidden;
+    }
+    .tw-new{
       font-size:9px;font-weight:800;letter-spacing:1px;
       color:#050a1a;background:#f0a500;
-      padding:2px 6px;border-radius:3px;flex-shrink:0;
+      padding:1px 5px;border-radius:3px;flex-shrink:0;
     }
-    .tick-stats{
-      display:flex;flex-direction:column;
-      align-items:flex-end;gap:3px;flex-shrink:0;
-    }
-    .tick-stat{font-size:11px;color:rgba(180,200,255,0.55)}
-    .tick-time{font-size:10px;color:rgba(180,200,255,0.4);flex-shrink:0}
-
     @keyframes newPulse{0%,100%{opacity:1}50%{opacity:0.35}}
-    .tick-card.is-new .tick-stripe{animation:newPulse 1.6s ease-in-out infinite}
+    .tw-card.is-new{animation:newPulse 2s ease-in-out infinite}
   </style>
 </head>
 <body>
@@ -113,7 +133,8 @@
   <div class="li"><div class="ld" style="background:#00e5aa"></div>Companies</div>
 </div>
 <div id="loading">Loading photos…</div>
-<div id="ticker"></div>
+<div id="company-panel"></div>
+<div id="tweet-panel"></div>
 
 <script>
 const canvas = document.getElementById('c');
@@ -122,9 +143,6 @@ const tip    = document.getElementById('tooltip');
 const ttN    = document.getElementById('ttN');
 const ttR    = document.getElementById('ttR');
 const loadEl = document.getElementById('loading');
-const ticker = document.getElementById('ticker');
-
-const TICKER_H = 76; // height of bottom ticker bar in px
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const GOVT   = { color:'#f0a500', glow:'rgba(240,165,0,0.4)',   ring:1 };
@@ -205,7 +223,7 @@ const nodes = [
   { name:'Kraken',                 org:'Kraken Exchange',     role:'Major Crypto Exchange',                                       cat:CORP,   tw:'krakenfx' },
 ];
 
-// Special index for CoinDesk center node (not in orbit, but shows in ticker)
+// Special index for CoinDesk center node (not in orbit, but shows in tweet stack)
 const COINDESK_IDX = nodes.length;
 const CD_NODE = { name:'CoinDesk', org:'coindesk.com', cat:GOVT, tw:'CoinDesk' };
 
@@ -272,7 +290,7 @@ let time = 0;
 let followDataLoaded = false;
 
 function positionLogo() {
-  const baseR = Math.min(W, H - TICKER_H) * 0.062;
+  const baseR = Math.min(W, H) * 0.062;
   const el = document.getElementById('centerLogo');
   const d  = baseR * 2;
   el.style.width  = d + 'px';
@@ -285,20 +303,19 @@ function resize() {
   W = canvas.width  = window.innerWidth;
   H = canvas.height = window.innerHeight;
   cx = W / 2;
-  cy = (H - TICKER_H) / 2; // center in the non-ticker area
+  cy = H / 2;
   bgCanvas = null;
   computeLayout();
   positionLogo();
 }
 
 function computeLayout() {
-  const md = Math.min(W, H - TICKER_H);
-  // Radii tuned for 19 / 31 / 8 node distribution across 3 rings
-  const r1 = md * 0.24, r2 = md * 0.39, r3 = md * 0.46;
+  const md = Math.min(W, H);
+  // 2-ring layout: GOVT+FIN inner, CRYPTO+MEDIA outer. CORP in right panel.
+  const r1 = md * 0.22, r2 = md * 0.42;
 
   const ring1 = nodes.filter(n => n.cat.ring === 1);
   const ring2 = nodes.filter(n => n.cat.ring === 2);
-  const ring3 = nodes.filter(n => n.cat.ring === 3);
 
   nodeState = [];
   ring1.forEach((n,i) => {
@@ -308,10 +325,6 @@ function computeLayout() {
   ring2.forEach((n,i) => {
     const a = (2*Math.PI / Math.max(ring2.length, 1)) * i - Math.PI/3;
     nodeState.push({...n, baseAngle:a, r:r2, speed:0.00007, x:cx+r2*Math.cos(a), y:cy+r2*Math.sin(a), radius:20});
-  });
-  ring3.forEach((n,i) => {
-    const a = (2*Math.PI / Math.max(ring3.length, 1)) * i - Math.PI/4;
-    nodeState.push({...n, baseAngle:a, r:r3, speed:0.00005, x:cx+r3*Math.cos(a), y:cy+r3*Math.sin(a), radius:22});
   });
 
   if (peerEdges.length === 0 && !followDataLoaded) generatePeerEdges();
@@ -352,7 +365,7 @@ function drawStars() {
   stars.forEach(s => {
     const f = 0.4 + 0.6*(0.5 + 0.5*Math.sin(time*0.001*s.s + s.a*100));
     ctx.globalAlpha = f*s.a; ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(s.x*W, s.y*(H-TICKER_H), s.s*0.65, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.s*0.65, 0, Math.PI*2); ctx.fill();
   });
   ctx.globalAlpha = 1;
 }
@@ -367,7 +380,7 @@ function drawOrbitRing(r, a=0.09) {
 // ── Center node ───────────────────────────────────────────────────────────────
 function drawCenter() {
   const pulse = 1 + 0.03*Math.sin(time*0.002);
-  const baseR = Math.min(W, H-TICKER_H)*0.062*pulse;
+  const baseR = Math.min(W, H)*0.062*pulse;
 
   [0.065, 0.22].forEach((a,i) => {
     const gr = ctx.createRadialGradient(cx,cy,0, cx,cy, baseR*(2.7-i*0.8));
@@ -505,7 +518,7 @@ function frame(ts) {
 
   try {
     const dt = Math.min(elapsed, 50) / 16.667; // normalise to 60fps-equivalent
-    const md = Math.min(W, H - TICKER_H);
+    const md = Math.min(W, H);
 
     ensureBg();
     ctx.drawImage(bgCanvas, 0, 0);
@@ -535,9 +548,8 @@ function frame(ts) {
       }
     }
 
-    drawOrbitRing(md*0.24, 0.08);
-    drawOrbitRing(md*0.39, 0.07);
-    if (nodes.some(n => n.cat.ring === 3)) drawOrbitRing(md*0.46, 0.06); // only if ring 3 has nodes
+    drawOrbitRing(md*0.22, 0.08);
+    drawOrbitRing(md*0.42, 0.07);
     drawAllEdges();
     nodeState.forEach((n,i) => drawNode(n,i));
     drawCenter();
@@ -575,19 +587,22 @@ window.addEventListener('resize', resize);
 
 // ── Tweet system ──────────────────────────────────────────────────────────────
 const WORKER_URL     = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
-const FETCH_INTERVAL = 5 * 60 * 1000;        // re-fetch every 5 min
-const MAX_TWEET_AGE  = 3 * 60 * 60 * 1000;   // 3-hour window
-const NEW_TWEET_AGE  = 30 * 60 * 1000;        // "NEW" badge for tweets < 30 min old
-const CYCLE_INTERVAL = 10_000;                // new tweet every 10 seconds
+const FETCH_INTERVAL = 5 * 60 * 1000;
+const MAX_TWEET_AGE  = 3 * 60 * 60 * 1000;
+const NEW_TWEET_AGE  = 30 * 60 * 1000;
+const CYCLE_INTERVAL = 10_000;
+const MAX_STACK      = 4;
 
-const tweetCache = {};  // handle (lowercase) → tweet object
-let   tweetQueue  = []; // sorted list of indices (nodeState indices + COINDESK_IDX)
+const tweetCache = {};
+let   tweetQueue  = [];
+const stackCards  = [];
+
+// All nodes including CORP — used for tweet lookup
+const allNodes = nodes; // alias for clarity
 
 async function fetchTweets() {
   try {
-    // Include 'coindesk' so CoinDesk's own tweets appear in the ticker
-    const handles = [...new Set([...nodes.map(n=>n.tw).filter(Boolean), 'CoinDesk'])];
-    // Batch into groups of 30 to avoid Twitter API URL length limits
+    const handles = [...new Set([...allNodes.map(n=>n.tw).filter(Boolean), 'CoinDesk'])];
     const BATCH = 30;
     const batches = [];
     for (let i = 0; i < handles.length; i += BATCH) batches.push(handles.slice(i, i + BATCH));
@@ -607,11 +622,11 @@ async function fetchTweets() {
 
 function rebuildQueue() {
   const now = Date.now();
-  // Regular node indices
-  const regular = nodeState
+  // All nodes (orbit + CORP) by index into allNodes[]
+  const regular = allNodes
     .map((_,i) => i)
     .filter(i => {
-      const tweet = tweetCache[nodeState[i]?.tw?.toLowerCase()];
+      const tweet = tweetCache[allNodes[i]?.tw?.toLowerCase()];
       if (!tweet) return false;
       const age = now - new Date(tweet.created).getTime();
       return !isNaN(age) && age < MAX_TWEET_AGE;
@@ -624,20 +639,17 @@ function rebuildQueue() {
 
   const all = [...regular, ...(cdValid ? [COINDESK_IDX] : [])];
 
-  // Sort oldest → newest so cycling progresses chronologically
   all.sort((a, b) => {
     const getCreated = i => i === COINDESK_IDX
       ? new Date(tweetCache['coindesk']?.created || 0)
-      : new Date(tweetCache[nodeState[i]?.tw?.toLowerCase()]?.created || 0);
+      : new Date(tweetCache[allNodes[i]?.tw?.toLowerCase()]?.created || 0);
     return getCreated(a) - getCreated(b);
   });
 
   tweetQueue = all;
 }
 
-// ── Ticker DOM ────────────────────────────────────────────────────────────────
-let activeTick = null;
-
+// ── Tweet stack DOM ────────────────────────────────────────────────────────────
 function timeAgo(isoStr) {
   const diff = (Date.now() - new Date(isoStr)) / 1000;
   if (diff < 60)    return `${Math.floor(diff)}s ago`;
@@ -646,169 +658,161 @@ function timeAgo(isoStr) {
   return `${Math.floor(diff/86400)}d ago`;
 }
 
-function truncate(text, max=200) {
+function truncate(text, max=120) {
   return text.length > max ? text.slice(0, max).trimEnd() + '…' : text;
 }
 
-function buildTickCard(n, tweet) {
+function buildTweetCard(n, tweet) {
   try {
-    const likes    = Number(tweet.likes    ?? 0);
-    const retweets = Number(tweet.retweets ?? 0);
-    const name     = String(tweet.name     || n.name.replace('\n',' '));
-    const handle   = String(tweet.handle   || n.tw || '');
-    const text     = truncate(String(tweet.text || ''));
-    const age      = Date.now() - new Date(tweet.created).getTime();
-    const isNew    = !isNaN(age) && age < NEW_TWEET_AGE;
+    const name   = String(tweet.name   || n.name.replace('\n',' '));
+    const handle = String(tweet.handle || n.tw || '');
+    const text   = truncate(String(tweet.text || ''));
+    const age    = Date.now() - new Date(tweet.created).getTime();
+    const isNew  = !isNaN(age) && age < NEW_TWEET_AGE;
 
     const card = document.createElement('div');
-    card.className = 'tick-card' + (isNew ? ' is-new' : '');
+    card.className = 'tw-card' + (isNew ? ' is-new' : '');
+    card.style.borderLeftColor = n.cat.color;
 
-    // Click → open tweet on Twitter/X
     if (tweet.id && handle) {
-      card.addEventListener('click', () => {
-        window.open(`https://x.com/${handle}/status/${tweet.id}`, '_blank', 'noopener');
-      });
+      card.addEventListener('click', () =>
+        window.open(`https://x.com/${handle}/status/${tweet.id}`, '_blank', 'noopener'));
     }
-
-    // Color stripe
-    const stripe = document.createElement('div');
-    stripe.className = 'tick-stripe';
-    stripe.style.background = n.cat.color;
 
     // Avatar
-    let avatar;
+    let av;
     const src = tweet.avatar ? String(tweet.avatar) : '';
     if (src && /^https?:\/\//.test(src)) {
-      avatar = document.createElement('img');
-      avatar.className = 'tick-avatar';
-      avatar.alt = '';
-      avatar.onerror = () => {
+      av = document.createElement('img');
+      av.className = 'tw-av'; av.alt = '';
+      av.onerror = () => {
         const fb = document.createElement('div');
-        fb.className = 'tick-avatar-fb';
-        fb.style.background = n.cat.color;
-        fb.textContent = name[0] || '?';
-        avatar.replaceWith(fb);
+        fb.className = 'tw-av-fb'; fb.style.background = n.cat.color;
+        fb.textContent = name[0] || '?'; av.replaceWith(fb);
       };
-      avatar.src = src;
+      av.src = src;
     } else {
-      avatar = document.createElement('div');
-      avatar.className = 'tick-avatar-fb';
-      avatar.style.background = n.cat.color;
-      avatar.textContent = name[0] || '?';
+      av = document.createElement('div');
+      av.className = 'tw-av-fb'; av.style.background = n.cat.color;
+      av.textContent = name[0] || '?';
     }
 
-    // Info column
-    const info = document.createElement('div');
-    info.className = 'tick-info';
+    const body = document.createElement('div');
+    body.className = 'tw-body';
 
-    const nameline = document.createElement('div');
-    nameline.className = 'tick-nameline';
+    const meta = document.createElement('div');
+    meta.className = 'tw-meta';
 
     if (isNew) {
       const badge = document.createElement('span');
-      badge.className = 'tick-badge';
-      badge.textContent = 'NEW';
-      nameline.appendChild(badge);
+      badge.className = 'tw-new'; badge.textContent = 'NEW';
+      meta.appendChild(badge);
     }
-
     const nameEl = document.createElement('span');
-    nameEl.className = 'tick-name'; nameEl.textContent = name;
-
+    nameEl.className = 'tw-name'; nameEl.textContent = name;
     const handleEl = document.createElement('span');
-    handleEl.className = 'tick-handle';
-    handleEl.style.color = n.cat.color;
+    handleEl.className = 'tw-handle'; handleEl.style.color = n.cat.color;
     handleEl.textContent = `@${handle}`;
+    const timeEl = document.createElement('span');
+    timeEl.className = 'tw-time'; timeEl.textContent = timeAgo(tweet.created);
 
-    nameline.appendChild(nameEl);
-    nameline.appendChild(handleEl);
+    meta.appendChild(nameEl); meta.appendChild(handleEl); meta.appendChild(timeEl);
 
     const textEl = document.createElement('div');
-    textEl.className = 'tick-text'; textEl.textContent = text;
+    textEl.className = 'tw-text'; textEl.textContent = text;
 
-    info.appendChild(nameline); info.appendChild(textEl);
-
-    // Stats
-    const stats = document.createElement('div');
-    stats.className = 'tick-stats';
-    const likesEl = document.createElement('div');
-    likesEl.className = 'tick-stat'; likesEl.textContent = `♥ ${likes.toLocaleString()}`;
-    const rtEl = document.createElement('div');
-    rtEl.className = 'tick-stat'; rtEl.textContent = `↺ ${retweets.toLocaleString()}`;
-    stats.appendChild(likesEl); stats.appendChild(rtEl);
-
-    // Time
-    const timeEl = document.createElement('div');
-    timeEl.className = 'tick-time'; timeEl.textContent = timeAgo(tweet.created);
-
-    card.appendChild(stripe);
-    card.appendChild(avatar);
-    card.appendChild(info);
-    card.appendChild(stats);
-    card.appendChild(timeEl);
+    body.appendChild(meta); body.appendChild(textEl);
+    card.appendChild(av); card.appendChild(body);
     return card;
   } catch(e) {
-    console.warn('[buildTickCard]', e);
+    console.warn('[buildTweetCard]', e);
     return null;
   }
 }
 
-function showTickerCard(n, tweet) {
-  const card = buildTickCard(n, tweet);
+function showTweetInStack(n, tweet) {
+  const card = buildTweetCard(n, tweet);
   if (!card) return;
-
-  ticker.appendChild(card);
-  // Double-rAF so the browser paints the initial transform before we animate
+  const panel = document.getElementById('tweet-panel');
+  panel.appendChild(card);
   requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
-
-  // Slide out the previous card
-  if (activeTick) {
-    const old = activeTick;
-    old.classList.remove('visible');
-    old.classList.add('gone');
-    setTimeout(() => old.remove(), 500);
+  stackCards.push(card);
+  if (stackCards.length > MAX_STACK) {
+    const old = stackCards.shift();
+    old.classList.remove('visible'); old.classList.add('gone');
+    setTimeout(() => old.remove(), 350);
   }
-  activeTick = card;
 }
 
-function cycleTickerTweets() {
+function cycleTweetStack() {
   try {
     if (tweetQueue.length === 0) return;
-
-    const idx = tweetQueue.shift();
-    tweetQueue.push(idx); // rotate to back
-
+    const idx  = tweetQueue.shift();
+    tweetQueue.push(idx);
     const isCD = (idx === COINDESK_IDX);
-    const n    = isCD ? CD_NODE : nodeState[idx];
+    const n    = isCD ? CD_NODE : allNodes[idx];
     if (!n) return;
-
     const handle = isCD ? 'coindesk' : n.tw?.toLowerCase();
     const tweet  = tweetCache[handle];
     if (!tweet) return;
-
     const age = Date.now() - new Date(tweet.created).getTime();
     if (isNaN(age) || age >= MAX_TWEET_AGE) return;
-
-    showTickerCard(n, tweet);
+    showTweetInStack(n, tweet);
   } catch(e) {
-    console.warn('[cycleTickerTweets]', e);
+    console.warn('[cycleTweetStack]', e);
   }
+}
+
+// ── Company panel ──────────────────────────────────────────────────────────────
+function buildCompanyPanel() {
+  const panel = document.getElementById('company-panel');
+  if (!panel) return;
+  panel.innerHTML = '';
+  const hdr = document.createElement('div');
+  hdr.className = 'co-header'; hdr.textContent = 'COMPANIES';
+  panel.appendChild(hdr);
+  nodes.filter(n => n.cat === CORP).forEach(n => {
+    const item = document.createElement('div');
+    item.className = 'co-item';
+    item.title = n.org || '';
+    if (n.tw) item.addEventListener('click', () =>
+      window.open(`https://x.com/${n.tw}`, '_blank', 'noopener'));
+
+    const av = document.createElement('img');
+    av.className = 'co-avatar'; av.alt = '';
+    av.onerror = () => {
+      const fb = document.createElement('div');
+      fb.className = 'co-avatar-fb'; fb.textContent = n.name[0];
+      av.replaceWith(fb);
+    };
+    av.src = `https://unavatar.io/twitter/${n.tw}`;
+
+    const nm = document.createElement('div');
+    nm.className = 'co-name'; nm.textContent = n.name;
+
+    item.appendChild(av); item.appendChild(nm);
+    panel.appendChild(item);
+  });
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 resize();
 requestAnimationFrame(frame);
 loadAllImages();
+buildCompanyPanel();
 
 fetchTweets().then(() => {
-  // Seed ticker immediately with the most recent tweet (if any within window)
+  // Seed stack immediately with the most recent tweets (up to MAX_STACK)
   if (tweetQueue.length > 0) {
-    const seedIdx  = tweetQueue[tweetQueue.length - 1];
-    const isCD     = seedIdx === COINDESK_IDX;
-    const seedNode = isCD ? CD_NODE : nodeState[seedIdx];
-    const seedTweet= tweetCache[isCD ? 'coindesk' : seedNode?.tw?.toLowerCase()];
-    if (seedNode && seedTweet) showTickerCard(seedNode, seedTweet);
+    const seeds = tweetQueue.slice(-Math.min(MAX_STACK, tweetQueue.length));
+    seeds.forEach(seedIdx => {
+      const isCD     = seedIdx === COINDESK_IDX;
+      const seedNode = isCD ? CD_NODE : allNodes[seedIdx];
+      const seedTweet= tweetCache[isCD ? 'coindesk' : seedNode?.tw?.toLowerCase()];
+      if (seedNode && seedTweet) showTweetInStack(seedNode, seedTweet);
+    });
   }
-  setInterval(cycleTickerTweets, CYCLE_INTERVAL); // always start, even if queue empty on boot
+  setInterval(cycleTweetStack, CYCLE_INTERVAL);
 });
 
 setInterval(fetchTweets, FETCH_INTERVAL);
