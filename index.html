@@ -8,6 +8,8 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:#050a1a;font-family:'Segoe UI',Arial,sans-serif;overflow:hidden;width:100vw;height:100vh}
     canvas{display:block}
+
+    /* ── Tooltip ─────────────────────────────────────────────────────────── */
     #tooltip{
       position:absolute;background:rgba(8,16,42,0.97);
       border:1px solid rgba(240,165,0,0.55);border-radius:10px;
@@ -17,80 +19,89 @@
     }
     #tooltip .ttN{color:#fff;font-size:14px;font-weight:700;margin-bottom:4px}
     #tooltip .ttR{color:#f0c060;font-size:12px;line-height:1.4}
+
+    /* ── Legend ──────────────────────────────────────────────────────────── */
     #legend{position:absolute;top:18px;left:18px;display:flex;flex-direction:column;gap:7px}
     .li{display:flex;align-items:center;gap:8px;font-size:11px;color:#99aacc}
     .ld{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+
+    /* ── Loading ─────────────────────────────────────────────────────────── */
     #loading{
-      position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+      position:absolute;bottom:94px;left:50%;transform:translateX(-50%);
       color:rgba(240,165,0,0.6);font-size:11px;letter-spacing:2px;
       text-transform:uppercase;transition:opacity 0.6s;white-space:nowrap;
     }
-    /* ── Tweet stack (right side feed) ──────────────────────────────────── */
-    #tweetStack {
-      position: absolute;
-      right: 18px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
-      width: 258px;
-      pointer-events: none;
-      z-index: 100;
-    }
-    .tweet-card {
-      background: rgba(6, 14, 35, 0.96);
-      border: 1px solid rgba(240,165,0,0.45);
-      border-radius: 12px;
-      padding: 11px 13px 10px;
-      box-shadow: 0 0 20px rgba(240,165,0,0.18), 0 4px 24px rgba(0,0,0,0.6);
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      /* Spring easing: fast start, smooth overshoot settle */
-      transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-                  transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .tweet-card.entering {
-      opacity: 0;
-      transform: translateY(-18px) scale(0.96);
-    }
-    .tweet-card.exiting {
-      opacity: 0;
-      transform: translateY(12px) scale(0.97);
-      /* Quicker ease-in on exit */
-      transition: opacity 0.32s ease-in, transform 0.32s ease-in;
-    }
-    .tweet-card .tc-header { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
-    .tweet-card .tc-avatar { width:30px; height:30px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid rgba(240,165,0,0.4); }
-    .tweet-card .tc-avatar-placeholder { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#000; }
-    .tweet-card .tc-meta { display:flex; flex-direction:column; }
-    .tweet-card .tc-name { font-size:12px; font-weight:700; color:#fff; line-height:1.2; }
-    .tweet-card .tc-handle { font-size:10px; color:rgba(240,165,0,0.7); }
-    .tweet-card .tc-text { font-size:11.5px; color:#d8e8ff; line-height:1.5; margin-bottom:7px; word-break:break-word; }
-    .tweet-card .tc-footer { display:flex; gap:12px; font-size:10px; color:rgba(180,200,255,0.5); align-items:center; }
-    .tweet-card .tc-footer span { display:flex; align-items:center; gap:3px; }
-    .tweet-card .tc-time { margin-left:auto; }
+
+    /* ── Center logo ─────────────────────────────────────────────────────── */
     #centerLogo{
-      position:absolute;
-      border-radius:50%;
-      overflow:hidden;
-      border:2.5px solid rgba(240,165,0,0.8);
-      background:#000;
-      pointer-events:none;
+      position:absolute;border-radius:50%;overflow:hidden;
+      border:2.5px solid rgba(240,165,0,0.8);background:#000;
+      pointer-events:none;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 30px rgba(240,165,0,0.35),0 0 60px rgba(240,165,0,0.15);
+    }
+    #centerLogo img{width:80%;height:80%;object-fit:contain}
+
+    /* ── Bottom ticker ───────────────────────────────────────────────────── */
+    #ticker{
+      position:fixed;bottom:0;left:0;right:0;height:76px;
+      background:rgba(5,10,26,0.97);
+      border-top:1px solid rgba(240,165,0,0.25);
+      overflow:hidden;z-index:200;
+    }
+    .tick-card{
+      position:absolute;inset:0;
+      display:flex;align-items:center;
+      padding:0 28px;gap:14px;
+      cursor:pointer;
+      transform:translateX(110%);
+      transition:transform 0.6s cubic-bezier(0.22,1,0.36,1);
+      text-decoration:none;
+    }
+    .tick-card.visible{transform:translateX(0)}
+    .tick-card.gone{transform:translateX(-110%);transition:transform 0.45s ease-in}
+
+    .tick-stripe{width:3px;height:48px;border-radius:2px;flex-shrink:0}
+
+    .tick-avatar{
+      width:44px;height:44px;border-radius:50%;
+      object-fit:cover;flex-shrink:0;
+      border:1.5px solid rgba(255,255,255,0.15);
+    }
+    .tick-avatar-fb{
+      width:44px;height:44px;border-radius:50%;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;
-      box-shadow:0 0 30px rgba(240,165,0,0.35), 0 0 60px rgba(240,165,0,0.15);
-      transition:box-shadow 0.3s;
+      font-weight:700;font-size:18px;color:#000;
     }
-    #centerLogo img{
-      width:80%;height:80%;
-      object-fit:contain;
+    .tick-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+    .tick-nameline{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+    .tick-name{font-size:13px;font-weight:700;color:#fff;white-space:nowrap}
+    .tick-handle{font-size:11px;white-space:nowrap}
+    .tick-text{
+      font-size:12px;color:#ccdaf0;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
+    .tick-badge{
+      font-size:9px;font-weight:800;letter-spacing:1px;
+      color:#050a1a;background:#f0a500;
+      padding:2px 6px;border-radius:3px;flex-shrink:0;
+    }
+    .tick-stats{
+      display:flex;flex-direction:column;
+      align-items:flex-end;gap:3px;flex-shrink:0;
+    }
+    .tick-stat{font-size:11px;color:rgba(180,200,255,0.55)}
+    .tick-time{font-size:10px;color:rgba(180,200,255,0.4);flex-shrink:0}
+
+    @keyframes newPulse{0%,100%{opacity:1}50%{opacity:0.35}}
+    .tick-card.is-new .tick-stripe{animation:newPulse 1.6s ease-in-out infinite}
   </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="centerLogo">
-  <img id="cdLogo" src="https://thegivingblock.com/wp-content/uploads/2021/08/Coindesk-media-partners-the-giving-block-600px.png" alt="CoinDesk" crossorigin="anonymous"/>
+  <img id="cdLogo"
+    src="https://thegivingblock.com/wp-content/uploads/2021/08/Coindesk-media-partners-the-giving-block-600px.png"
+    alt="CoinDesk" crossorigin="anonymous"/>
 </div>
 <div id="tooltip"><div class="ttN" id="ttN"></div><div class="ttR" id="ttR"></div></div>
 <div id="legend">
@@ -99,10 +110,11 @@
   <div class="li"><div class="ld" style="background:#00d4ff"></div>Crypto Industry</div>
   <div class="li"><div class="ld" style="background:#b060ff"></div>Finance / Investing</div>
   <div class="li"><div class="ld" style="background:#ff6b6b"></div>Tech / Media</div>
+  <div class="li"><div class="ld" style="background:#00e5aa"></div>Companies</div>
 </div>
-<svg id="tweetLines" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99;overflow:visible;"></svg>
-<div id="tweetStack"></div>
 <div id="loading">Loading photos…</div>
+<div id="ticker"></div>
+
 <script>
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
@@ -110,53 +122,93 @@ const tip    = document.getElementById('tooltip');
 const ttN    = document.getElementById('ttN');
 const ttR    = document.getElementById('ttR');
 const loadEl = document.getElementById('loading');
+const ticker = document.getElementById('ticker');
+
+const TICKER_H = 76; // height of bottom ticker bar in px
+
 // ── Categories ────────────────────────────────────────────────────────────────
 const GOVT   = { color:'#f0a500', glow:'rgba(240,165,0,0.4)',   ring:1 };
 const CRYPTO = { color:'#00d4ff', glow:'rgba(0,212,255,0.4)',   ring:2 };
 const FIN    = { color:'#b060ff', glow:'rgba(176,96,255,0.4)',  ring:1 };
 const MEDIA  = { color:'#ff6b6b', glow:'rgba(255,107,107,0.4)', ring:2 };
-// ── Nodes: name, org, role, category, twitter handle, wikipedia title ────────
+const CORP   = { color:'#00e5aa', glow:'rgba(0,229,170,0.4)',   ring:3 };
+
+// ── Nodes ─────────────────────────────────────────────────────────────────────
 const nodes = [
   // Government / Policy (ring 1)
-  { name:'Anthony Scaramucci',     org:'SkyBridge Capital',          role:'Former White House Communications Director',               cat:GOVT,   tw:'scaramucci',       wiki:'Anthony Scaramucci' },
-  { name:'Brandon Lutnick',        org:'Cantor Fitzgerald',           role:'Chairman, Cantor Fitzgerald / Son of Secretary of Commerce', cat:GOVT, tw:'Brandonlutnick',    wiki:null },
-  { name:'Senator Lummis',         org:'U.S. Senate',                 role:'U.S. Senator (WY)',                                        cat:GOVT,   tw:'CynthiaMLummis',    wiki:'Cynthia Lummis' },
-  { name:'David Sacks',            org:'White House',                 role:'White House AI & Crypto Czar',                             cat:GOVT,   tw:'davidsacks47',      wiki:'David O. Sacks' },
-  { name:'Hester Peirce',          org:'SEC',                         role:'SEC Commissioner ("Crypto Mom")',                          cat:GOVT,   tw:'HesterPeirce',      wiki:'Hester Peirce' },
-  { name:'Patrick Witt',           org:'White House / PCADA',         role:"Executive Director, President's Council of Advisors for Digital Assets", cat:GOVT, tw:'patrickjwitt', wiki:null },
-  { name:'Michael Selig',          org:'CFTC',                        role:'Chairman, CFTC',                                           cat:GOVT,   tw:'ChairmanSelig',     wiki:'Michael S. Selig' },
-  // Crypto Industry (ring 2)
-  { name:'Brian Armstrong',        org:'Coinbase',                    role:'CEO, Coinbase',                                            cat:CRYPTO, tw:'brian_armstrong',   wiki:'Brian Armstrong (businessman)' },
-  { name:'Gracy Chen',             org:'Bitget',                      role:'CEO, Bitget',                                              cat:CRYPTO, tw:'GracyBitget',       wiki:null },
-  { name:'Richard Teng',           org:'Binance',                     role:'Co-CEO, Binance',                                          cat:CRYPTO, tw:'_RichardTeng',      wiki:'Richard Teng' },
-  { name:'Yi He',                  org:'Binance',                     role:'Co-CEO, Binance',                                          cat:CRYPTO, tw:'heyibinance',       wiki:null },
-  { name:'Paolo Ardoino',          org:'Tether',                      role:'CEO, Tether',                                              cat:CRYPTO, tw:'paoloardoino',      wiki:'Paolo Ardoino' },
-  { name:'Mike Belshe',            org:'BitGo',                       role:'CEO, BitGo',                                               cat:CRYPTO, tw:'mikebelshe',        wiki:'Mike Belshe' },
-  { name:'Justin Sun',             org:'TRON',                        role:'Founder, TRON',                                            cat:CRYPTO, tw:'justinsuntron',     wiki:'Justin Sun (entrepreneur)' },
-  { name:'Michael Saylor',         org:'Strategy',                    role:'Executive Chairman, Strategy',                             cat:CRYPTO, tw:'saylor',            wiki:'Michael Saylor' },
-  { name:'Charles Hoskinson',      org:'Cardano / IOG',               role:'Co-Founder, Cardano / IOG',                               cat:CRYPTO, tw:'IOHK_Charles',      wiki:'Charles Hoskinson' },
-  { name:'Anatoly Yakovenko',      org:'Solana',                      role:'Founder, Solana',                                          cat:CRYPTO, tw:'aeyakovenko',       wiki:'Anatoly Yakovenko' },
-  { name:'Lily Liu',               org:'Solana Foundation',           role:'President, Solana Foundation',                             cat:CRYPTO, tw:'calilyliu',         wiki:null },
-  { name:'Ella Zhang',             org:'YZi Labs',                    role:'Head of YZi Labs (Binance Labs)',                          cat:CRYPTO, tw:'ellazhang516',      wiki:null },
-  { name:'Tyler & Cameron\nWinklevoss', org:'Gemini',                 role:'Co-Founders, Gemini',                                     cat:CRYPTO, tw:'tylerwinklevoss',   wiki:'Winklevoss twins' },
-  { name:'Luana Lopes Lara',       org:'Kalshi',                      role:'Co-Founder, Kalshi',                                       cat:CRYPTO, tw:'luanalopeslara',    wiki:null },
-  { name:'John Wang',              org:'Kalshi',                      role:'Head of Crypto, Kalshi',                                   cat:CRYPTO, tw:'j0hnwang',          wiki:null },
-  { name:'Cat Ferdon',             org:'Coinbase',                    role:'CMO, Coinbase',                                            cat:CRYPTO, tw:'catferdon',         wiki:null },
+  { name:'Anthony Scaramucci',     org:'SkyBridge Capital',   role:'Former White House Communications Director',                    cat:GOVT,   tw:'scaramucci' },
+  { name:'Brandon Lutnick',        org:'Cantor Fitzgerald',   role:'Chairman, Cantor Fitzgerald',                                  cat:GOVT,   tw:'Brandonlutnick' },
+  { name:'Senator Lummis',         org:'U.S. Senate',         role:'U.S. Senator (WY)',                                            cat:GOVT,   tw:'CynthiaMLummis' },
+  { name:'David Sacks',            org:'White House',         role:'White House AI & Crypto Czar',                                 cat:GOVT,   tw:'davidsacks47' },
+  { name:'Hester Peirce',          org:'SEC',                 role:'SEC Commissioner ("Crypto Mom")',                              cat:GOVT,   tw:'HesterPeirce' },
+  { name:'Patrick Witt',           org:'White House / PCADA', role:"Executive Director, President's Council of Advisors",          cat:GOVT,   tw:'patrickjwitt' },
+  { name:'Michael Selig',          org:'CFTC',                role:'Chairman, CFTC',                                               cat:GOVT,   tw:'ChairmanSelig' },
   // Finance / Investing (ring 1)
-  { name:'Tom Farley',             org:'Bullish',                     role:'CEO, Bullish / Former President, NYSE',                    cat:FIN,    tw:'ThomasFarley',      wiki:'Tom Farley (businessman)' },
-  { name:"Kevin O'Leary",          org:"O'Leary Ventures",            role:'Investor & TV Personality ("Mr. Wonderful")',              cat:FIN,    tw:'kevinolearytv',     wiki:"Kevin O'Leary" },
-  { name:'Tom Lee',                org:'Fundstrat',                   role:'CIO, Fundstrat',                                           cat:FIN,    tw:'fundstrat',         wiki:'Thomas Lee (analyst)' },
-  { name:'Mike Novogratz',         org:'Galaxy Digital',              role:'CEO, Galaxy Digital',                                      cat:FIN,    tw:'novogratz',         wiki:'Michael Novogratz' },
-  { name:'Robert Leshner',         org:'Superstate',                  role:'CEO, Superstate Inc.',                                     cat:FIN,    tw:'rleshner',          wiki:'Robert Leshner' },
+  { name:'Tom Farley',             org:'Bullish',             role:'CEO, Bullish / Former President, NYSE',                        cat:FIN,    tw:'ThomasFarley' },
+  { name:"Kevin O'Leary",          org:"O'Leary Ventures",    role:'Investor & TV Personality ("Mr. Wonderful")',                  cat:FIN,    tw:'kevinolearytv' },
+  { name:'Tom Lee',                org:'Fundstrat',           role:'CIO, Fundstrat',                                               cat:FIN,    tw:'fundstrat' },
+  { name:'Mike Novogratz',         org:'Galaxy Digital',      role:'CEO, Galaxy Digital',                                          cat:FIN,    tw:'novogratz' },
+  { name:'Robert Leshner',         org:'Superstate',          role:'CEO, Superstate Inc.',                                         cat:FIN,    tw:'rleshner' },
+  { name:'Chamath\nPalihapitiya',  org:'Social Capital',      role:'Investor & All-In Podcast Co-Host',                           cat:FIN,    tw:'chamath' },
+  { name:'Cathie Wood',            org:'ARK Invest',          role:'Founder & CEO, ARK Invest',                                   cat:FIN,    tw:'CathieDWood' },
+  { name:'Chris Burniske',         org:'Placeholder VC',      role:'Partner, Placeholder VC',                                     cat:FIN,    tw:'cburniske' },
+  { name:'Fred Wilson',            org:'Union Square Ventures',role:'Co-Founder, Union Square Ventures',                          cat:FIN,    tw:'fredwilson' },
+  { name:'Barry Silbert',          org:'Digital Currency Group',role:'Founder & CEO, Digital Currency Group',                     cat:FIN,    tw:'BarrySilbert' },
+  { name:'Chris Nejatian',         org:'Robinhood',           role:'VP Crypto, Robinhood',                                        cat:FIN,    tw:'nejatian' },
+  { name:'Dan Tapiero',            org:'10T Holdings',        role:'Founder, 10T Holdings',                                       cat:FIN,    tw:'DTAPCAP' },
+  // Crypto Industry (ring 2)
+  { name:'Brian Armstrong',        org:'Coinbase',            role:'CEO, Coinbase',                                                cat:CRYPTO, tw:'brian_armstrong' },
+  { name:'Gracy Chen',             org:'Bitget',              role:'CEO, Bitget',                                                  cat:CRYPTO, tw:'GracyBitget' },
+  { name:'Richard Teng',           org:'Binance',             role:'Co-CEO, Binance',                                             cat:CRYPTO, tw:'_RichardTeng' },
+  { name:'Yi He',                  org:'Binance',             role:'Co-CEO, Binance',                                              cat:CRYPTO, tw:'heyibinance' },
+  { name:'Paolo Ardoino',          org:'Tether',              role:'CEO, Tether',                                                  cat:CRYPTO, tw:'paoloardoino' },
+  { name:'Mike Belshe',            org:'BitGo',               role:'CEO, BitGo',                                                   cat:CRYPTO, tw:'mikebelshe' },
+  { name:'Justin Sun',             org:'TRON',                role:'Founder, TRON',                                                cat:CRYPTO, tw:'justinsuntron' },
+  { name:'Michael Saylor',         org:'Strategy',            role:'Executive Chairman, Strategy',                                 cat:CRYPTO, tw:'saylor' },
+  { name:'Charles Hoskinson',      org:'Cardano / IOG',       role:'Co-Founder, Cardano / IOG',                                   cat:CRYPTO, tw:'IOHK_Charles' },
+  { name:'Anatoly Yakovenko',      org:'Solana',              role:'Founder, Solana',                                              cat:CRYPTO, tw:'aeyakovenko' },
+  { name:'Lily Liu',               org:'Solana Foundation',   role:'President, Solana Foundation',                                 cat:CRYPTO, tw:'calilyliu' },
+  { name:'Ella Zhang',             org:'YZi Labs',            role:'Head of YZi Labs (Binance Labs)',                              cat:CRYPTO, tw:'ellazhang516' },
+  { name:'Tyler & Cameron\nWinklevoss', org:'Gemini',         role:'Co-Founders, Gemini',                                         cat:CRYPTO, tw:'tylerwinklevoss' },
+  { name:'Luana Lopes Lara',       org:'Kalshi',              role:'Co-Founder, Kalshi',                                           cat:CRYPTO, tw:'luanalopeslara' },
+  { name:'John Wang',              org:'Kalshi',              role:'Head of Crypto, Kalshi',                                       cat:CRYPTO, tw:'j0hnwang' },
+  { name:'Cat Ferdon',             org:'Coinbase',            role:'CMO, Coinbase',                                                cat:CRYPTO, tw:'catferdon' },
+  { name:'Yat Siu',                org:'Animoca Brands',      role:'Co-Founder & CEO, Animoca Brands',                            cat:CRYPTO, tw:'ysiu' },
+  { name:'Mo Shaikh',              org:'Aptos Labs',          role:'Co-Founder & CEO, Aptos Labs',                                cat:CRYPTO, tw:'Moshaikh' },
+  { name:'Jeremy Allaire',         org:'Circle',              role:'Co-Founder & CEO, Circle',                                    cat:CRYPTO, tw:'jerallaire' },
+  { name:'Armani Ferrante',        org:'Backpack',            role:'Founder & CEO, Backpack',                                     cat:CRYPTO, tw:'armaniferrante' },
+  { name:'John Wu',                org:'Ava Labs',            role:'President, Ava Labs',                                         cat:CRYPTO, tw:'John1wu' },
+  { name:'Mert Mumtaz',            org:'Helius',              role:'CEO, Helius',                                                  cat:CRYPTO, tw:'mert' },
+  { name:'ZachXBT',                org:'Independent',         role:'On-chain Investigator',                                       cat:CRYPTO, tw:'zachxbt' },
+  { name:'Denelle Dixon',          org:'Stellar Foundation',  role:'CEO, Stellar Development Foundation',                         cat:CRYPTO, tw:'DenelleDixon' },
+  { name:'David Marcus',           org:'Lightspark',          role:'Co-Founder & CEO, Lightspark',                                cat:CRYPTO, tw:'davidmarcus' },
   // Tech / Media (ring 2)
-  { name:'Cuy Sheffield',          org:'Visa',                        role:'Head of Crypto, Visa',                                     cat:MEDIA,  tw:'cuysheffield',      wiki:null },
-  { name:'Kate Rouch',             org:'OpenAI',                      role:'CMO, OpenAI',                                              cat:MEDIA,  tw:'kate_rouch',        wiki:null },
-  { name:'Chamath Palihapitiya',   org:'Social Capital',              role:'Investor & All-In Podcast Co-Host',                        cat:FIN,    tw:'chamath',           wiki:'Chamath Palihapitiya' },
+  { name:'Cuy Sheffield',          org:'Visa',                role:'Head of Crypto, Visa',                                         cat:MEDIA,  tw:'cuysheffield' },
+  { name:'Kate Rouch',             org:'OpenAI',              role:'CMO, OpenAI',                                                  cat:MEDIA,  tw:'kate_rouch' },
+  { name:'Joe Rogan',              org:'The Joe Rogan Experience', role:'Podcast Host',                                           cat:MEDIA,  tw:'joerogan' },
+  { name:'Gary Vaynerchuk',        org:'VaynerMedia',         role:'Entrepreneur & Investor',                                     cat:MEDIA,  tw:'garyvee' },
+  { name:'Degenerate News',        org:'Crypto Media',        role:'Crypto News & Commentary',                                    cat:MEDIA,  tw:'DegenerateNews' },
+  { name:'Arav Srinivas',          org:'Perplexity AI',       role:'CEO, Perplexity AI',                                          cat:MEDIA,  tw:'AravSrinivas' },
+  // Companies (ring 3)
+  { name:'The Block',              org:'Crypto Media',        role:'Crypto News Publication',                                     cat:CORP,   tw:'TheBlockCo' },
+  { name:'Grayscale',              org:'Grayscale Investments',role:'Largest Crypto Asset Manager',                               cat:CORP,   tw:'Grayscale' },
+  { name:'Polymarket',             org:'Prediction Markets',  role:'Leading Prediction Market Platform',                          cat:CORP,   tw:'Polymarket' },
+  { name:'Kalshi',                 org:'Prediction Markets',  role:'CFTC-Regulated Prediction Market',                            cat:CORP,   tw:'Kalshi' },
+  { name:'Ripple',                 org:'Ripple Labs',         role:'Enterprise Blockchain & XRP',                                 cat:CORP,   tw:'Ripple' },
+  { name:'Binance',                org:'Binance Exchange',    role:'World\'s Largest Crypto Exchange',                            cat:CORP,   tw:'binance' },
+  { name:'McDonald\'s',            org:'McDonald\'s Corp.',   role:'Global Fast Food Brand',                                      cat:CORP,   tw:'McDonalds' },
+  { name:'a16z Crypto',            org:'Andreessen Horowitz', role:'Leading Crypto Venture Fund',                                 cat:CORP,   tw:'a16zcrypto' },
 ];
-// ── Image cache: key -> HTMLImageElement | null | 'loading' ─────────────────
+
+// Special index for CoinDesk center node (not in orbit, but shows in ticker)
+const COINDESK_IDX = nodes.length;
+const CD_NODE = { name:'CoinDesk', org:'coindesk.com', cat:GOVT, tw:'CoinDesk' };
+
+// ── Image cache ───────────────────────────────────────────────────────────────
 const imgCache = {};
 let loaded = 0;
 const TOTAL = nodes.length + 1;
+
 function loadImg(src) {
   return new Promise(res => {
     let settled = false;
@@ -169,25 +221,19 @@ function loadImg(src) {
     const tid = setTimeout(() => finish(null), 8000);
   });
 }
+
 async function fetchPersonImage(n) {
   const key = n.name.replace('\n',' ');
   imgCache[key] = 'loading';
-  // 1. Try unavatar.io (Twitter profile photo)
   if (n.tw) {
     const img = await loadImg(`https://unavatar.io/twitter/${n.tw}`);
     if (img) { imgCache[key] = img; loaded++; updateLoader(); return; }
-    // fallback: try x handle
     const img2 = await loadImg(`https://unavatar.io/x/${n.tw}`);
     if (img2) { imgCache[key] = img2; loaded++; updateLoader(); return; }
   }
-  // 2. Try Wikipedia thumbnail
   if (n.wiki) {
     try {
-      const r = await fetch(
-        `https://en.wikipedia.org/w/api.php?action=query`+
-        `&titles=${encodeURIComponent(n.wiki)}`+
-        `&prop=pageimages&format=json&pithumbsize=120&origin=*`
-      );
+      const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(n.wiki)}&prop=pageimages&format=json&pithumbsize=120&origin=*`);
       const d = await r.json();
       for (const p of Object.values(d.query.pages)) {
         if (p.thumbnail?.source) {
@@ -197,32 +243,32 @@ async function fetchPersonImage(n) {
       }
     } catch {}
   }
-  imgCache[key] = null;
-  loaded++;
-  updateLoader();
+  imgCache[key] = null; loaded++; updateLoader();
 }
+
 async function loadAllImages() {
-  // Logo is handled via HTML <img> element — skip canvas fetch
-  loaded++;
-  updateLoader();
-  // Load all node photos in parallel batches of 6
+  loaded++; updateLoader();
   for (let i = 0; i < nodes.length; i += 6) {
     await Promise.all(nodes.slice(i, i+6).map(fetchPersonImage));
   }
   loadEl.style.opacity = '0';
   setTimeout(() => loadEl.style.display='none', 700);
 }
+
 function updateLoader() {
   loadEl.textContent = `Loading photos… ${loaded}/${TOTAL}`;
 }
+
 // ── Layout ────────────────────────────────────────────────────────────────────
 let W, H, cx, cy;
 let nodeState = [];
-let peerEdges  = [];
+let peerEdges = [];
 let hoveredIdx = -1;
 let time = 0;
+let followDataLoaded = false;
+
 function positionLogo() {
-  const baseR = Math.min(W,H)*0.062;
+  const baseR = Math.min(W, H - TICKER_H) * 0.062;
   const el = document.getElementById('centerLogo');
   const d  = baseR * 2;
   el.style.width  = d + 'px';
@@ -230,234 +276,253 @@ function positionLogo() {
   el.style.left   = (cx - baseR) + 'px';
   el.style.top    = (cy - baseR) + 'px';
 }
+
 function resize() {
   W = canvas.width  = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  cx = W/2; cy = H/2;
-  bgCanvas = null; // invalidate cached background
+  cx = W / 2;
+  cy = (H - TICKER_H) / 2; // center in the non-ticker area
+  bgCanvas = null;
   computeLayout();
   positionLogo();
 }
+
 function computeLayout() {
-  const md = Math.min(W,H);
-  const r1 = md*0.27, r2 = md*0.44;
-  const ring1 = nodes.filter(n=>n.cat.ring===1);
-  const ring2 = nodes.filter(n=>n.cat.ring===2);
+  const md = Math.min(W, H - TICKER_H);
+  // Radii tuned for 19 / 31 / 8 node distribution across 3 rings
+  const r1 = md * 0.24, r2 = md * 0.39, r3 = md * 0.54;
+
+  const ring1 = nodes.filter(n => n.cat.ring === 1);
+  const ring2 = nodes.filter(n => n.cat.ring === 2);
+  const ring3 = nodes.filter(n => n.cat.ring === 3);
+
   nodeState = [];
   ring1.forEach((n,i) => {
-    const a = (2*Math.PI/ring1.length)*i - Math.PI/2;
-    nodeState.push({...n, baseAngle:a, r:r1, speed:0.00011,
-      x:cx+r1*Math.cos(a), y:cy+r1*Math.sin(a), radius:26});
+    const a = (2*Math.PI / Math.max(ring1.length, 1)) * i - Math.PI/2;
+    nodeState.push({...n, baseAngle:a, r:r1, speed:0.00012, x:cx+r1*Math.cos(a), y:cy+r1*Math.sin(a), radius:22});
   });
   ring2.forEach((n,i) => {
-    const a = (2*Math.PI/ring2.length)*i - Math.PI/3;
-    nodeState.push({...n, baseAngle:a, r:r2, speed:0.00007,
-      x:cx+r2*Math.cos(a), y:cy+r2*Math.sin(a), radius:24});
+    const a = (2*Math.PI / Math.max(ring2.length, 1)) * i - Math.PI/3;
+    nodeState.push({...n, baseAngle:a, r:r2, speed:0.00007, x:cx+r2*Math.cos(a), y:cy+r2*Math.sin(a), radius:20});
   });
-  if (peerEdges.length === 0) generatePeerEdges();
+  ring3.forEach((n,i) => {
+    const a = (2*Math.PI / Math.max(ring3.length, 1)) * i - Math.PI/4;
+    nodeState.push({...n, baseAngle:a, r:r3, speed:0.00005, x:cx+r3*Math.cos(a), y:cy+r3*Math.sin(a), radius:22});
+  });
+
+  if (peerEdges.length === 0 && !followDataLoaded) generatePeerEdges();
 }
+
 function generatePeerEdges() {
   let seed = 42;
   const rand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
   const n = nodeState.length;
   const edgeSet = new Set();
-  const degreeCount = new Array(n).fill(0);
+  const deg = new Array(n).fill(0);
   const addEdge = (a, b) => {
     if (a === b) return;
     const key = `${Math.min(a,b)}-${Math.max(a,b)}`;
     if (edgeSet.has(key)) return;
-    edgeSet.add(key);
-    degreeCount[a]++; degreeCount[b]++;
+    edgeSet.add(key); deg[a]++; deg[b]++;
     peerEdges.push({ a, b, phase: rand() * Math.PI * 2 });
   };
-  // 1. Same-category connections (cluster feel)
   for (let i = 0; i < n; i++) {
-    const sameCat = nodeState.map((nd,j) => j).filter(j => j !== i && nodeState[j].cat === nodeState[i].cat);
+    const same = nodeState.map((_,j)=>j).filter(j => j !== i && nodeState[j].cat === nodeState[i].cat);
     const picks = Math.floor(rand() * 2) + 1;
     for (let p = 0; p < picks; p++) {
-      const j = sameCat[Math.floor(rand() * sameCat.length)];
+      const j = same[Math.floor(rand() * same.length)];
       if (j !== undefined) addEdge(i, j);
     }
   }
-  // 2. Cross-category random connections — ~30 extras
   for (let e = 0; e < 34; e++) {
-    const a = Math.floor(rand() * n);
-    const b = Math.floor(rand() * n);
-    if (degreeCount[a] < 5 && degreeCount[b] < 5) addEdge(a, b);
+    const a = Math.floor(rand() * n), b = Math.floor(rand() * n);
+    if (deg[a] < 5 && deg[b] < 5) addEdge(a, b);
   }
 }
+
 // ── Stars ─────────────────────────────────────────────────────────────────────
-const stars = Array.from({length:150}, ()=>({x:Math.random(),y:Math.random(),s:Math.random()*1.8+0.2,a:Math.random()}));
+const stars = Array.from({length:150}, () => ({
+  x:Math.random(), y:Math.random(), s:Math.random()*1.8+0.2, a:Math.random()
+}));
 function drawStars() {
   stars.forEach(s => {
-    const f=0.4+0.6*(0.5+0.5*Math.sin(time*0.001*s.s+s.a*100));
-    ctx.globalAlpha=f*s.a; ctx.fillStyle='#fff';
-    ctx.beginPath(); ctx.arc(s.x*W,s.y*H,s.s*0.65,0,Math.PI*2); ctx.fill();
+    const f = 0.4 + 0.6*(0.5 + 0.5*Math.sin(time*0.001*s.s + s.a*100));
+    ctx.globalAlpha = f*s.a; ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(s.x*W, s.y*(H-TICKER_H), s.s*0.65, 0, Math.PI*2); ctx.fill();
   });
-  ctx.globalAlpha=1;
+  ctx.globalAlpha = 1;
 }
-function drawOrbitRing(r,a=0.09) {
-  ctx.save(); ctx.strokeStyle=`rgba(240,165,0,${a})`; ctx.lineWidth=1;
+
+function drawOrbitRing(r, a=0.09) {
+  ctx.save(); ctx.strokeStyle = `rgba(240,165,0,${a})`; ctx.lineWidth = 1;
   ctx.setLineDash([4,14]);
-  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
   ctx.setLineDash([]); ctx.restore();
 }
+
 // ── Center node ───────────────────────────────────────────────────────────────
 function drawCenter() {
-  const pulse  = 1 + 0.03*Math.sin(time*0.002);
-  const baseR  = Math.min(W,H)*0.062*pulse;
+  const pulse = 1 + 0.03*Math.sin(time*0.002);
+  const baseR = Math.min(W, H-TICKER_H)*0.062*pulse;
+
   [0.065, 0.22].forEach((a,i) => {
-    const gr = ctx.createRadialGradient(cx,cy,0,cx,cy,baseR*(2.7-i*0.8));
-    gr.addColorStop(0,`rgba(240,165,0,${a})`); gr.addColorStop(1,'transparent');
-    ctx.beginPath(); ctx.arc(cx,cy,baseR*(2.7-i*0.8),0,Math.PI*2);
-    ctx.fillStyle=gr; ctx.fill();
+    const gr = ctx.createRadialGradient(cx,cy,0, cx,cy, baseR*(2.7-i*0.8));
+    gr.addColorStop(0, `rgba(240,165,0,${a})`); gr.addColorStop(1, 'transparent');
+    ctx.beginPath(); ctx.arc(cx,cy, baseR*(2.7-i*0.8), 0, Math.PI*2);
+    ctx.fillStyle = gr; ctx.fill();
   });
+
   ctx.beginPath(); ctx.arc(cx,cy,baseR,0,Math.PI*2);
-  ctx.fillStyle='#000'; ctx.fill();
+  ctx.fillStyle = '#000'; ctx.fill();
   ctx.beginPath(); ctx.arc(cx,cy,baseR,0,Math.PI*2);
-  ctx.strokeStyle='rgba(240,165,0,0.78)'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.strokeStyle = 'rgba(240,165,0,0.78)'; ctx.lineWidth = 2.5; ctx.stroke();
+
   const el = document.getElementById('centerLogo');
   const d  = baseR*2;
-  el.style.width  = d + 'px';
-  el.style.height = d + 'px';
-  el.style.left   = (cx - baseR) + 'px';
-  el.style.top    = (cy - baseR) + 'px';
+  el.style.width  = d+'px'; el.style.height = d+'px';
+  el.style.left   = (cx-baseR)+'px'; el.style.top = (cy-baseR)+'px';
 }
-// ── Draw all edges ─────────────────────────────────────────────────────────────
+
+// ── Edges ─────────────────────────────────────────────────────────────────────
 function drawAllEdges() {
   const n = nodeState.length;
   for (let i = 0; i < n; i++) {
-    const nd  = nodeState[i];
-    const hov = hoveredIdx === i;
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nd.x, nd.y);
+    const nd = nodeState[i], hov = hoveredIdx === i;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(nd.x,nd.y);
     ctx.lineWidth   = hov ? 2.5 : 1.2;
-    ctx.strokeStyle = hov ? nd.cat.color + 'cc' : 'rgba(240,165,0,0.32)';
+    ctx.strokeStyle = hov ? nd.cat.color+'cc' : 'rgba(240,165,0,0.32)';
     ctx.stroke();
   }
   peerEdges.forEach(e => {
-    const na = nodeState[e.a], nb = nodeState[e.b];
-    if (!na || !nb) return;
-    const hovA = hoveredIdx === e.a, hovB = hoveredIdx === e.b;
-    const active = hovA || hovB;
-    const pulse = 0.5 + 0.5*Math.sin(time*0.0008 + e.phase);
+    const na = nodeState[e.a], nb = nodeState[e.b]; if (!na||!nb) return;
+    const active = hoveredIdx===e.a || hoveredIdx===e.b;
+    const pulse  = 0.5 + 0.5*Math.sin(time*0.0008 + e.phase);
     if (active) {
-      const gr = ctx.createLinearGradient(na.x, na.y, nb.x, nb.y);
-      gr.addColorStop(0, na.cat.color + 'ee');
-      gr.addColorStop(1, nb.cat.color + 'ee');
-      ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
+      const gr = ctx.createLinearGradient(na.x,na.y,nb.x,nb.y);
+      gr.addColorStop(0, na.cat.color+'ee'); gr.addColorStop(1, nb.cat.color+'ee');
+      ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y);
       ctx.lineWidth = 2; ctx.strokeStyle = gr; ctx.stroke();
     } else {
-      const alpha = (0.18 + 0.10*pulse).toFixed(2);
-      ctx.beginPath(); ctx.moveTo(na.x, na.y); ctx.lineTo(nb.x, nb.y);
+      ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y);
       ctx.lineWidth   = 1.0;
-      ctx.strokeStyle = `rgba(180,200,255,${alpha})`;
+      ctx.strokeStyle = `rgba(180,200,255,${(0.18+0.10*pulse).toFixed(2)})`;
       ctx.stroke();
     }
   });
 }
+
 // ── Node ──────────────────────────────────────────────────────────────────────
 function drawNode(n, idx) {
-  const hov  = hoveredIdx===idx;
-  const pulse = 1 + 0.05*Math.sin(time*0.003+n.baseAngle);
-  const r    = n.radius*(hov ? 1.4 : pulse);
-  const key  = n.name.replace('\n',' ');
-  const img  = imgCache[key];
+  const hov   = hoveredIdx === idx;
+  const pulse = 1 + 0.05*Math.sin(time*0.003 + n.baseAngle);
+  const r     = n.radius * (hov ? 1.4 : pulse);
+  const key   = n.name.replace('\n',' ');
+  const img   = imgCache[key];
+
+  // Glow — gradient only for hovered; flat fill otherwise (saves 31 gradient objects/frame)
   ctx.beginPath(); ctx.arc(n.x,n.y,r*1.7,0,Math.PI*2);
   if (hov) {
     const grd = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*1.7);
-    grd.addColorStop(0, n.cat.glow.replace('0.4','0.55'));
-    grd.addColorStop(1,'transparent');
-    ctx.fillStyle=grd;
+    grd.addColorStop(0, n.cat.glow.replace('0.4','0.55')); grd.addColorStop(1,'transparent');
+    ctx.fillStyle = grd;
   } else {
     ctx.fillStyle = n.cat.glow.replace('0.4','0.10');
   }
   ctx.fill();
+
   ctx.beginPath(); ctx.arc(n.x,n.y,r+1,0,Math.PI*2);
-  ctx.fillStyle='#000'; ctx.fill();
+  ctx.fillStyle = '#000'; ctx.fill();
+
   ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
   if (img && img !== 'loading') {
-    ctx.fillStyle='#111'; ctx.fill();
+    ctx.fillStyle = '#111'; ctx.fill();
     ctx.save();
     ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2); ctx.clip();
-    const iw=img.width, ih=img.height;
-    const side=Math.min(iw,ih);
+    const iw=img.width, ih=img.height, side=Math.min(iw,ih);
     const sx=(iw-side)/2, sy=(ih-side)/2;
     ctx.drawImage(img, sx,sy,side,side, n.x-r,n.y-r,r*2,r*2);
     ctx.restore();
   } else {
     const nd = ctx.createRadialGradient(n.x-r*0.3,n.y-r*0.3,0,n.x,n.y,r);
     nd.addColorStop(0,'#fff'); nd.addColorStop(0.3,n.cat.color); nd.addColorStop(1,n.cat.color+'44');
-    ctx.fillStyle=nd; ctx.fill();
+    ctx.fillStyle = nd; ctx.fill();
     const init = n.name.replace('\n',' ').split(' ').filter(w=>w.length).slice(0,2).map(w=>w[0].toUpperCase()).join('');
-    ctx.save();
-    ctx.font=`bold ${Math.round(r*0.68)}px 'Segoe UI',Arial`;
+    ctx.save(); ctx.font=`bold ${Math.round(r*0.68)}px 'Segoe UI',Arial`;
     ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(init, n.x, n.y);
-    ctx.restore();
+    ctx.fillText(init, n.x, n.y); ctx.restore();
   }
+
   ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
   ctx.strokeStyle = hov ? n.cat.color : n.cat.color+'66';
-  ctx.lineWidth = hov?2.5:1.2; ctx.stroke();
-  ctx.save();
-  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.lineWidth = hov ? 2.5 : 1.2; ctx.stroke();
+
+  // Labels — skip shadow for non-hovered (GPU-expensive)
+  ctx.save(); ctx.textAlign='center'; ctx.textBaseline='top';
   if (hov) { ctx.shadowColor=n.cat.color; ctx.shadowBlur=14; }
-  const fs = hov?13:10.5;
-  ctx.font=`${hov?700:600} ${fs}px 'Segoe UI',Arial`;
-  ctx.fillStyle=hov?'#fff':'#ddeeff';
+  const fs = hov ? 13 : 10.5;
+  ctx.font = `${hov?700:600} ${fs}px 'Segoe UI',Arial`;
+  ctx.fillStyle = hov ? '#fff' : '#ddeeff';
   const nameLines = n.name.split('\n');
   const ly = n.y + r + 5;
   nameLines.forEach((line,li) => ctx.fillText(line, n.x, ly + li*(fs+2)));
   const orgY = ly + nameLines.length*(fs+2) + 1;
-  const ofs = hov?11:9;
-  ctx.font=`500 ${ofs}px 'Segoe UI',Arial`;
+  const ofs = hov ? 11 : 9;
+  ctx.font = `500 ${ofs}px 'Segoe UI',Arial`;
   ctx.fillStyle = n.cat.color;
   if (hov) ctx.shadowBlur = 8;
   ctx.fillText(n.org, n.x, orgY);
   ctx.restore();
 }
-// ── Background pre-render ──────────────────────────────────────────────────────
+
+// ── Background offscreen cache ────────────────────────────────────────────────
 let bgCanvas = null;
 function ensureBg() {
   if (bgCanvas && bgCanvas.width === W && bgCanvas.height === H) return;
   bgCanvas = document.createElement('canvas');
   bgCanvas.width = W; bgCanvas.height = H;
   const bc = bgCanvas.getContext('2d');
-  const gr = bc.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W,H)*0.8);
+  const gr = bc.createRadialGradient(cx,cy,0, cx,cy, Math.max(W,H)*0.8);
   gr.addColorStop(0,'#0a1525'); gr.addColorStop(1,'#050a1a');
   bc.fillStyle = gr; bc.fillRect(0,0,W,H);
 }
-// ── Render loop ───────────────────────────────────────────────────────────────
-let frameCount   = 0;
-let lastFrameTs  = 0;
-const FRAME_MS   = 1000 / 30;
+
+// ── Render loop (capped at 30fps) ─────────────────────────────────────────────
+let frameCount  = 0;
+let lastFrameTs = 0;
+const FRAME_MS  = 1000 / 30;
+
 function frame(ts) {
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); // FIRST — loop survives any error below
   const elapsed = ts - lastFrameTs;
   if (elapsed < FRAME_MS) return;
   lastFrameTs = ts;
   frameCount++;
   time = ts;
+
   try {
-    const dt = Math.min(elapsed, 50) / 16.667;
+    const dt = Math.min(elapsed, 50) / 16.667; // normalise to 60fps-equivalent
+    const md = Math.min(W, H - TICKER_H);
+
     ensureBg();
     ctx.drawImage(bgCanvas, 0, 0);
     drawStars();
-    const md = Math.min(W,H);
+
     nodeState.forEach(n => {
       n.baseAngle += n.speed * dt;
       n.x = cx + n.r*Math.cos(n.baseAngle);
       n.y = cy + n.r*Math.sin(n.baseAngle);
     });
+
+    // Repulsion every 4th frame
     if (frameCount % 4 === 0) {
-      const MIN_NODE_DIST = 72;
-      const REPULSE = 0.000072;
+      const MIN_DIST = 72, REPULSE = 0.000072;
       for (let i = 0; i < nodeState.length; i++) {
         for (let j = i+1; j < nodeState.length; j++) {
           const a = nodeState[i], b = nodeState[j];
           const dx = b.x-a.x, dy = b.y-a.y;
           const dist = Math.sqrt(dx*dx+dy*dy);
-          if (dist < MIN_NODE_DIST && dist > 0) {
-            const force = (MIN_NODE_DIST-dist)/MIN_NODE_DIST*REPULSE;
+          if (dist < MIN_DIST && dist > 0) {
+            const force = (MIN_DIST-dist)/MIN_DIST*REPULSE;
             a.baseAngle -= force; b.baseAngle += force;
             a.x = cx+a.r*Math.cos(a.baseAngle); a.y = cy+a.r*Math.sin(a.baseAngle);
             b.x = cx+b.r*Math.cos(b.baseAngle); b.y = cy+b.r*Math.sin(b.baseAngle);
@@ -465,232 +530,272 @@ function frame(ts) {
         }
       }
     }
-    drawOrbitRing(md*0.27,0.08);
-    drawOrbitRing(md*0.44,0.06);
+
+    drawOrbitRing(md*0.24, 0.08);
+    drawOrbitRing(md*0.39, 0.07);
+    if (nodes.some(n => n.cat.ring === 3)) drawOrbitRing(md*0.54, 0.06); // only if ring 3 has nodes
     drawAllEdges();
-    nodeState.forEach((n,i)=>drawNode(n,i));
+    nodeState.forEach((n,i) => drawNode(n,i));
     drawCenter();
   } catch(e) {
     console.error('[frame]', e);
   }
 }
+
 // ── Mouse ─────────────────────────────────────────────────────────────────────
-canvas.addEventListener('mousemove',e=>{
-  const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  let found=-1;
-  nodeState.forEach((n,i)=>{
-    const dx=mx-n.x,dy=my-n.y;
-    if(Math.sqrt(dx*dx+dy*dy)<n.radius*1.8)found=i;
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  let found = -1;
+  nodeState.forEach((n,i) => {
+    const dx=mx-n.x, dy=my-n.y;
+    if (Math.sqrt(dx*dx+dy*dy) < n.radius*1.8) found=i;
   });
-  hoveredIdx=found;
-  if(found>=0){
-    const n=nodeState[found];
-    ttN.textContent=n.name.replace('\n',' ');
-    ttR.textContent=n.role;
-    tip.style.opacity='1';
-    let tx=e.clientX+16,ty=e.clientY-8;
-    if(tx+250>W)tx=e.clientX-258;
-    if(ty+80>H)ty=e.clientY-88;
+  hoveredIdx = found;
+  if (found >= 0) {
+    const n = nodeState[found];
+    ttN.textContent = n.name.replace('\n',' ');
+    ttR.textContent = n.role || '';
+    tip.style.opacity = '1';
+    let tx=e.clientX+16, ty=e.clientY-8;
+    if (tx+250>W) tx=e.clientX-258;
+    if (ty+80>H)  ty=e.clientY-88;
     tip.style.left=tx+'px'; tip.style.top=ty+'px';
     canvas.style.cursor='pointer';
   } else {
-    tip.style.opacity='0';
-    canvas.style.cursor='default';
+    tip.style.opacity='0'; canvas.style.cursor='default';
   }
 });
-canvas.addEventListener('mouseleave',()=>{hoveredIdx=-1;tip.style.opacity='0';});
-window.addEventListener('resize',resize);
+canvas.addEventListener('mouseleave', () => { hoveredIdx=-1; tip.style.opacity='0'; });
+window.addEventListener('resize', resize);
+
 // ── Tweet system ──────────────────────────────────────────────────────────────
 const WORKER_URL     = 'https://cool-pine-8cd1.sam-ewen.workers.dev';
-const FETCH_INTERVAL = 2 * 60 * 1000;
-const MAX_TWEET_AGE  = 5 * 60 * 60 * 1000;
-const STACK_SIZE     = 3;
-const tweetCache = {};
-let   tweetQueue  = [];
+const FETCH_INTERVAL = 5 * 60 * 1000;        // re-fetch every 5 min
+const MAX_TWEET_AGE  = 3 * 60 * 60 * 1000;   // 3-hour window
+const NEW_TWEET_AGE  = 30 * 60 * 1000;        // "NEW" badge for tweets < 30 min old
+const CYCLE_INTERVAL = 10_000;                // new tweet every 10 seconds
+
+const tweetCache = {};  // handle (lowercase) → tweet object
+let   tweetQueue  = []; // sorted list of indices (nodeState indices + COINDESK_IDX)
+
 async function fetchTweets() {
-  const handles = nodes.map(n => n.tw).filter(Boolean);
-  if (!WORKER_URL.includes('YOUR-SUBDOMAIN')) {
-    try {
-      const url = `${WORKER_URL}/tweets?handles=${handles.join(',')}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      Object.assign(tweetCache, data);
-      console.log(`[tweets] loaded ${Object.keys(data).length} tweets`);
-      const now = Date.now();
-      tweetQueue = nodeState
-        .map((_,i)=>i)
-        .filter(i => {
-          const tweet = tweetCache[nodeState[i]?.tw?.toLowerCase()];
-          if (!tweet) return false;
-          return (now - new Date(tweet.created).getTime()) < MAX_TWEET_AGE;
-        })
-        .sort((a, b) => {
-          const tA = new Date(tweetCache[nodeState[a]?.tw?.toLowerCase()]?.created || 0);
-          const tB = new Date(tweetCache[nodeState[b]?.tw?.toLowerCase()]?.created || 0);
-          return tB - tA; // newest first
-        });
-      refreshStack(); // update stack with any new tweets
-    } catch(e) {
-      console.warn('[tweets] fetch failed:', e);
-    }
+  try {
+    // Include 'coindesk' so CoinDesk's own tweets appear in the ticker
+    const handles = [...new Set([...nodes.map(n=>n.tw).filter(Boolean), 'CoinDesk'])];
+    const url = `${WORKER_URL}/tweets?handles=${handles.join(',')}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    Object.assign(tweetCache, data);
+    console.log(`[tweets] loaded ${Object.keys(data).length} tweets`);
+    rebuildQueue();
+  } catch(e) {
+    console.warn('[tweets] fetch failed:', e);
   }
 }
+
+function rebuildQueue() {
+  const now = Date.now();
+  // Regular node indices
+  const regular = nodeState
+    .map((_,i) => i)
+    .filter(i => {
+      const tweet = tweetCache[nodeState[i]?.tw?.toLowerCase()];
+      if (!tweet) return false;
+      const age = now - new Date(tweet.created).getTime();
+      return !isNaN(age) && age < MAX_TWEET_AGE;
+    });
+
+  // CoinDesk center node
+  const cdTweet = tweetCache['coindesk'];
+  const cdAge   = cdTweet ? now - new Date(cdTweet.created).getTime() : NaN;
+  const cdValid = !isNaN(cdAge) && cdAge < MAX_TWEET_AGE;
+
+  const all = [...regular, ...(cdValid ? [COINDESK_IDX] : [])];
+
+  // Sort oldest → newest so cycling progresses chronologically
+  all.sort((a, b) => {
+    const getCreated = i => i === COINDESK_IDX
+      ? new Date(tweetCache['coindesk']?.created || 0)
+      : new Date(tweetCache[nodeState[i]?.tw?.toLowerCase()]?.created || 0);
+    return getCreated(a) - getCreated(b);
+  });
+
+  tweetQueue = all;
+}
+
+// ── Ticker DOM ────────────────────────────────────────────────────────────────
+let activeTick = null;
+
 function timeAgo(isoStr) {
   const diff = (Date.now() - new Date(isoStr)) / 1000;
-  if (diff < 60)   return `${Math.floor(diff)}s ago`;
-  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
-  if (diff < 86400)return `${Math.floor(diff/3600)}h ago`;
+  if (diff < 60)    return `${Math.floor(diff)}s ago`;
+  if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
   return `${Math.floor(diff/86400)}d ago`;
 }
-function truncate(text, max=160) {
+
+function truncate(text, max=200) {
   return text.length > max ? text.slice(0, max).trimEnd() + '…' : text;
 }
-function buildCard(n, tweet, nodeIdx) {
-  const card = document.createElement('div');
-  card.className = 'tweet-card entering';
-  card.dataset.nodeIdx  = nodeIdx;
-  card.dataset.catColor = n.cat.color;
-  card.style.borderColor = n.cat.color + '88';
-  card.style.boxShadow   = `0 0 20px ${n.cat.color}33, 0 4px 24px rgba(0,0,0,0.6)`;
-  const likes    = Number(tweet.likes    ?? 0);
-  const retweets = Number(tweet.retweets ?? 0);
-  const name     = String(tweet.name     || n.name.replace('\n',' '));
-  const handle   = String(tweet.handle   || n.tw || '');
-  const text     = truncate(String(tweet.text || ''));
-  let avatar;
-  const avatarSrc = tweet.avatar ? String(tweet.avatar) : '';
-  if (avatarSrc && /^https?:\/\//.test(avatarSrc)) {
-    avatar = document.createElement('img');
-    avatar.className = 'tc-avatar';
-    avatar.alt = '';
-    avatar.crossOrigin = 'anonymous';
-    avatar.src = avatarSrc;
-  } else {
-    avatar = document.createElement('div');
-    avatar.className = 'tc-avatar-placeholder';
-    avatar.style.background = n.cat.color;
-    avatar.textContent = name[0] || '?';
-  }
-  const metaName   = document.createElement('span'); metaName.className   = 'tc-name';   metaName.textContent = name;
-  const metaHandle = document.createElement('span'); metaHandle.className = 'tc-handle'; metaHandle.textContent = '@' + handle;
-  const meta = document.createElement('div'); meta.className = 'tc-meta';
-  meta.appendChild(metaName); meta.appendChild(metaHandle);
-  const header = document.createElement('div'); header.className = 'tc-header';
-  header.appendChild(avatar); header.appendChild(meta);
-  const body = document.createElement('div'); body.className = 'tc-text';
-  body.textContent = text;
-  const likesEl    = document.createElement('span'); likesEl.textContent    = '♥ ' + likes.toLocaleString();
-  const rtEl       = document.createElement('span'); rtEl.textContent       = '↺ ' + retweets.toLocaleString();
-  const timeEl     = document.createElement('span'); timeEl.className       = 'tc-time'; timeEl.textContent = timeAgo(tweet.created);
-  const footer = document.createElement('div'); footer.className = 'tc-footer';
-  footer.appendChild(likesEl); footer.appendChild(rtEl); footer.appendChild(timeEl);
-  card.appendChild(header); card.appendChild(body); card.appendChild(footer);
-  return card;
-}
-// ── Live connecting lines ──────────────────────────────────────────────────────
-const tweetLineMap = new Map();
-function updateTweetLines() {
+
+function buildTickCard(n, tweet) {
   try {
-    const svg   = document.getElementById('tweetLines');
-    const stack = document.getElementById('tweetStack');
-    if (!svg || !stack) return;
-    const cards = Array.from(stack.children);
-    const toDelete = [];
-    for (const [card, els] of tweetLineMap) {
-      if (!stack.contains(card)) toDelete.push([card, els]);
+    const likes    = Number(tweet.likes    ?? 0);
+    const retweets = Number(tweet.retweets ?? 0);
+    const name     = String(tweet.name     || n.name.replace('\n',' '));
+    const handle   = String(tweet.handle   || n.tw || '');
+    const text     = truncate(String(tweet.text || ''));
+    const age      = Date.now() - new Date(tweet.created).getTime();
+    const isNew    = !isNaN(age) && age < NEW_TWEET_AGE;
+
+    const card = document.createElement('div');
+    card.className = 'tick-card' + (isNew ? ' is-new' : '');
+
+    // Click → open tweet on Twitter/X
+    if (tweet.id && handle) {
+      card.addEventListener('click', () => {
+        window.open(`https://x.com/${handle}/status/${tweet.id}`, '_blank', 'noopener');
+      });
     }
-    toDelete.forEach(([card, els]) => {
-      els.path.remove(); els.dot.remove();
-      tweetLineMap.delete(card);
-    });
-    if (!cards.length) return;
-    cards.forEach(card => {
-      if (tweetLineMap.has(card)) return;
-      const color = card.dataset.catColor || '#f0a500';
-      const path  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', color);
-      path.setAttribute('stroke-width', '1.2');
-      path.setAttribute('stroke-dasharray', '4 6');
-      svg.appendChild(path);
-      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      dot.setAttribute('r', '3');
-      dot.setAttribute('fill', color);
-      svg.appendChild(dot);
-      tweetLineMap.set(card, { path, dot });
-    });
-    cards.forEach(card => {
-      const nodeIdx = parseInt(card.dataset.nodeIdx);
-      if (isNaN(nodeIdx)) return;
-      const node = nodeState[nodeIdx]; if (!node) return;
-      const els  = tweetLineMap.get(card); if (!els) return;
-      if (card.classList.contains('entering') || card.classList.contains('exiting')) {
-        els.path.setAttribute('stroke-opacity', '0');
-        els.dot.setAttribute('fill-opacity', '0');
-        return;
-      }
-      const rect = card.getBoundingClientRect();
-      const ex = rect.left, ey = rect.top + rect.height * 0.5;
-      const mx = (node.x + ex) * 0.5;
-      els.path.setAttribute('d', `M ${node.x} ${node.y} Q ${mx} ${node.y} ${ex} ${ey}`);
-      els.path.setAttribute('stroke-opacity', '0.5');
-      els.dot.setAttribute('cx', node.x);
-      els.dot.setAttribute('cy', node.y);
-      els.dot.setAttribute('fill-opacity', '0.7');
-    });
+
+    // Color stripe
+    const stripe = document.createElement('div');
+    stripe.className = 'tick-stripe';
+    stripe.style.background = n.cat.color;
+
+    // Avatar
+    let avatar;
+    const src = tweet.avatar ? String(tweet.avatar) : '';
+    if (src && /^https?:\/\//.test(src)) {
+      avatar = document.createElement('img');
+      avatar.className = 'tick-avatar';
+      avatar.crossOrigin = 'anonymous';
+      avatar.alt = '';
+      avatar.src = src;
+    } else {
+      avatar = document.createElement('div');
+      avatar.className = 'tick-avatar-fb';
+      avatar.style.background = n.cat.color;
+      avatar.textContent = name[0] || '?';
+    }
+
+    // Info column
+    const info = document.createElement('div');
+    info.className = 'tick-info';
+
+    const nameline = document.createElement('div');
+    nameline.className = 'tick-nameline';
+
+    if (isNew) {
+      const badge = document.createElement('span');
+      badge.className = 'tick-badge';
+      badge.textContent = 'NEW';
+      nameline.appendChild(badge);
+    }
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'tick-name'; nameEl.textContent = name;
+
+    const handleEl = document.createElement('span');
+    handleEl.className = 'tick-handle';
+    handleEl.style.color = n.cat.color;
+    handleEl.textContent = `@${handle}`;
+
+    nameline.appendChild(nameEl);
+    nameline.appendChild(handleEl);
+
+    const textEl = document.createElement('div');
+    textEl.className = 'tick-text'; textEl.textContent = text;
+
+    info.appendChild(nameline); info.appendChild(textEl);
+
+    // Stats
+    const stats = document.createElement('div');
+    stats.className = 'tick-stats';
+    const likesEl = document.createElement('div');
+    likesEl.className = 'tick-stat'; likesEl.textContent = `♥ ${likes.toLocaleString()}`;
+    const rtEl = document.createElement('div');
+    rtEl.className = 'tick-stat'; rtEl.textContent = `↺ ${retweets.toLocaleString()}`;
+    stats.appendChild(likesEl); stats.appendChild(rtEl);
+
+    // Time
+    const timeEl = document.createElement('div');
+    timeEl.className = 'tick-time'; timeEl.textContent = timeAgo(tweet.created);
+
+    card.appendChild(stripe);
+    card.appendChild(avatar);
+    card.appendChild(info);
+    card.appendChild(stats);
+    card.appendChild(timeEl);
+    return card;
   } catch(e) {
-    console.warn('[tweetLines]', e);
+    console.warn('[buildTickCard]', e);
+    return null;
   }
 }
-// Refresh the stack after a fetch — only adds genuinely new tweets, never cycles on a timer
-let stackInitialized = false;
-function refreshStack() {
+
+function showTickerCard(n, tweet) {
+  const card = buildTickCard(n, tweet);
+  if (!card) return;
+
+  ticker.appendChild(card);
+  // Double-rAF so the browser paints the initial transform before we animate
+  requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
+
+  // Slide out the previous card
+  if (activeTick) {
+    const old = activeTick;
+    old.classList.remove('visible');
+    old.classList.add('gone');
+    setTimeout(() => old.remove(), 500);
+  }
+  activeTick = card;
+}
+
+function cycleTickerTweets() {
   try {
-    const stack = document.getElementById('tweetStack');
-    if (!stack || tweetQueue.length === 0) return;
+    if (tweetQueue.length === 0) return;
 
-    const topIndices   = tweetQueue.slice(0, STACK_SIZE);
-    const shownIndices = new Set(
-      Array.from(stack.children).map(c => parseInt(c.dataset.nodeIdx))
-    );
+    const idx = tweetQueue.shift();
+    tweetQueue.push(idx); // rotate to back
 
-    // Only add tweets not already visible
-    const toAdd = topIndices.filter(i => !shownIndices.has(i));
-    if (toAdd.length === 0) return;
+    const isCD = (idx === COINDESK_IDX);
+    const n    = isCD ? CD_NODE : nodeState[idx];
+    if (!n) return;
 
-    // Insert oldest-of-new first so the newest ends up on top
-    [...toAdd].reverse().forEach(nodeIdx => {
-      const n = nodeState[nodeIdx]; if (!n) return;
-      const tweet = tweetCache[n.tw?.toLowerCase()]; if (!tweet) return;
-      const age = Date.now() - new Date(tweet.created).getTime();
-      if (isNaN(age) || age >= MAX_TWEET_AGE) return;
-      const card = buildCard(n, tweet, nodeIdx);
-      if (!stackInitialized) card.classList.remove('entering'); // no animation on first load
-      stack.insertBefore(card, stack.firstChild);
-      if (stackInitialized) {
-        requestAnimationFrame(() => requestAnimationFrame(() => card.classList.remove('entering')));
-      }
-    });
+    const handle = isCD ? 'coindesk' : n.tw?.toLowerCase();
+    const tweet  = tweetCache[handle];
+    if (!tweet) return;
 
-    stackInitialized = true;
+    const age = Date.now() - new Date(tweet.created).getTime();
+    if (isNaN(age) || age >= MAX_TWEET_AGE) return;
 
-    // Remove overflow from bottom — collect first to avoid async length issues
-    Array.from(stack.children).slice(STACK_SIZE).forEach(card => {
-      card.classList.add('exiting');
-      setTimeout(() => card.remove(), 380);
-    });
+    showTickerCard(n, tweet);
   } catch(e) {
-    console.warn('[refreshStack]', e);
+    console.warn('[cycleTickerTweets]', e);
   }
 }
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 resize();
 requestAnimationFrame(frame);
 loadAllImages();
-setInterval(updateTweetLines, 100);
-fetchTweets(); // initial fetch — refreshStack() is called inside fetchTweets after queue is built
+
+fetchTweets().then(() => {
+  if (tweetQueue.length === 0) return;
+
+  // Seed ticker immediately with the most recent tweet (last in oldest→newest queue)
+  const seedIdx  = tweetQueue[tweetQueue.length - 1];
+  const isCD     = seedIdx === COINDESK_IDX;
+  const seedNode = isCD ? CD_NODE : nodeState[seedIdx];
+  const seedTweet= tweetCache[isCD ? 'coindesk' : seedNode?.tw?.toLowerCase()];
+  if (seedNode && seedTweet) showTickerCard(seedNode, seedTweet);
+
+  setInterval(cycleTickerTweets, CYCLE_INTERVAL);
+});
+
 setInterval(fetchTweets, FETCH_INTERVAL);
 </script>
 </body>
