@@ -779,6 +779,7 @@ function buildCompanyPanel() {
     const item = document.createElement('div');
     item.className = 'co-item';
     item.title = n.org || '';
+    if (n.tw) item.dataset.tw = n.tw; // used for tweet line targeting
     if (n.tw) item.addEventListener('click', () =>
       window.open(`https://x.com/${n.tw}`, '_blank', 'noopener'));
 
@@ -804,8 +805,6 @@ const lineSvg = document.getElementById('lineSvg');
 const activeTweetLines = []; // { card, nodeStateIdx, line, rect, rectFrame }
 
 function addTweetLine(card, n) {
-  const nodeStateIdx = nodeState.findIndex(ns => ns.tw === n.tw);
-  if (nodeStateIdx < 0) return; // CORP nodes not in orbit — skip
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   line.setAttribute('stroke', n.cat.color);
   line.setAttribute('stroke-width', '1');
@@ -813,9 +812,19 @@ function addTweetLine(card, n) {
   line.setAttribute('opacity', '0');
   line.style.transition = 'opacity 0.5s';
   lineSvg.appendChild(line);
-  // Fade in after paint
   requestAnimationFrame(() => requestAnimationFrame(() => line.setAttribute('opacity', '0.35')));
-  activeTweetLines.push({ card, nodeStateIdx, line, rect: null, rectFrame: -999 });
+
+  const nodeStateIdx = nodeState.findIndex(ns => ns.tw === n.tw);
+  if (nodeStateIdx >= 0) {
+    // Orbit node — track moving canvas position
+    activeTweetLines.push({ card, type:'orbit', nodeStateIdx, line, rect:null, rectFrame:-999 });
+  } else if (n.cat === CORP) {
+    // Company panel item — connect to right-side panel entry
+    const targetEl = document.querySelector(`[data-tw="${n.tw}"]`);
+    activeTweetLines.push({ card, type:'company', targetEl, line, rect:null, rectFrame:-999, targetRect:null });
+  } else {
+    line.remove(); // no valid target
+  }
 }
 
 function removeTweetLine(card) {
@@ -841,12 +850,26 @@ function updateTweetLinePositions() {
       entry.rectFrame = frameCount;
     }
     if (!entry.rect) return;
-    const ns = nodeState[entry.nodeStateIdx];
-    if (!ns) return;
-    entry.line.setAttribute('x1', entry.rect.right);
-    entry.line.setAttribute('y1', entry.rect.top + entry.rect.height / 2);
-    entry.line.setAttribute('x2', ns.x);
-    entry.line.setAttribute('y2', ns.y);
+    const x1 = entry.rect.right;
+    const y1 = entry.rect.top + entry.rect.height / 2;
+
+    let x2, y2;
+    if (entry.type === 'orbit') {
+      const ns = nodeState[entry.nodeStateIdx];
+      if (!ns) return;
+      x2 = ns.x; y2 = ns.y;
+    } else {
+      // Company panel item — static target, read once then cache
+      if (!entry.targetRect) entry.targetRect = entry.targetEl?.getBoundingClientRect();
+      if (!entry.targetRect) return;
+      x2 = entry.targetRect.left;
+      y2 = entry.targetRect.top + entry.targetRect.height / 2;
+    }
+
+    entry.line.setAttribute('x1', x1);
+    entry.line.setAttribute('y1', y1);
+    entry.line.setAttribute('x2', x2);
+    entry.line.setAttribute('y2', y2);
   });
 }
 
