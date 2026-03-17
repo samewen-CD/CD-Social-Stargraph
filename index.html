@@ -219,7 +219,6 @@ function loadImg(src) {
     let settled = false;
     const finish = v => { if (!settled) { settled = true; clearTimeout(tid); res(v); } };
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.onload  = () => finish(img.width > 1 ? img : null);
     img.onerror = () => finish(null);
     img.src = src;
@@ -295,7 +294,7 @@ function resize() {
 function computeLayout() {
   const md = Math.min(W, H - TICKER_H);
   // Radii tuned for 19 / 31 / 8 node distribution across 3 rings
-  const r1 = md * 0.24, r2 = md * 0.39, r3 = md * 0.54;
+  const r1 = md * 0.24, r2 = md * 0.39, r3 = md * 0.46;
 
   const ring1 = nodes.filter(n => n.cat.ring === 1);
   const ring2 = nodes.filter(n => n.cat.ring === 2);
@@ -538,7 +537,7 @@ function frame(ts) {
 
     drawOrbitRing(md*0.24, 0.08);
     drawOrbitRing(md*0.39, 0.07);
-    if (nodes.some(n => n.cat.ring === 3)) drawOrbitRing(md*0.54, 0.06); // only if ring 3 has nodes
+    if (nodes.some(n => n.cat.ring === 3)) drawOrbitRing(md*0.46, 0.06); // only if ring 3 has nodes
     drawAllEdges();
     nodeState.forEach((n,i) => drawNode(n,i));
     drawCenter();
@@ -588,12 +587,18 @@ async function fetchTweets() {
   try {
     // Include 'coindesk' so CoinDesk's own tweets appear in the ticker
     const handles = [...new Set([...nodes.map(n=>n.tw).filter(Boolean), 'CoinDesk'])];
-    const url = `${WORKER_URL}/tweets?handles=${handles.join(',')}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    // Batch into groups of 30 to avoid Twitter API URL length limits
+    const BATCH = 30;
+    const batches = [];
+    for (let i = 0; i < handles.length; i += BATCH) batches.push(handles.slice(i, i + BATCH));
+    const results = await Promise.all(batches.map(async batch => {
+      const res = await fetch(`${WORKER_URL}/tweets?handles=${batch.join(',')}`);
+      if (!res.ok) { console.warn(`[tweets] batch failed HTTP ${res.status}`); return {}; }
+      return res.json();
+    }));
+    const data = Object.assign({}, ...results);
     Object.assign(tweetCache, data);
-    console.log(`[tweets] loaded ${Object.keys(data).length} tweets`);
+    console.log(`[tweets] loaded ${Object.keys(data).length} tweets across ${batches.length} batches`);
     rebuildQueue();
   } catch(e) {
     console.warn('[tweets] fetch failed:', e);
@@ -676,7 +681,6 @@ function buildTickCard(n, tweet) {
     if (src && /^https?:\/\//.test(src)) {
       avatar = document.createElement('img');
       avatar.className = 'tick-avatar';
-      avatar.crossOrigin = 'anonymous';
       avatar.alt = '';
       avatar.onerror = () => {
         const fb = document.createElement('div');
