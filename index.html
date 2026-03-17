@@ -118,6 +118,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<svg id="lineSvg" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50;overflow:visible;"></svg>
 <div id="centerLogo">
   <img id="cdLogo"
     src="https://thegivingblock.com/wp-content/uploads/2021/08/Coindesk-media-partners-the-giving-block-600px.png"
@@ -553,6 +554,7 @@ function frame(ts) {
     drawAllEdges();
     nodeState.forEach((n,i) => drawNode(n,i));
     drawCenter();
+    updateTweetLinePositions();
   } catch(e) {
     console.error('[frame]', e);
   }
@@ -736,9 +738,11 @@ function showTweetInStack(n, tweet) {
   const panel = document.getElementById('tweet-panel');
   panel.appendChild(card);
   requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('visible')));
+  addTweetLine(card, n);
   stackCards.push(card);
   if (stackCards.length > MAX_STACK) {
     const old = stackCards.shift();
+    removeTweetLine(old);
     old.classList.remove('visible'); old.classList.add('gone');
     setTimeout(() => old.remove(), 350);
   }
@@ -792,6 +796,57 @@ function buildCompanyPanel() {
 
     item.appendChild(av); item.appendChild(nm);
     panel.appendChild(item);
+  });
+}
+
+// ── Tweet→Node connection lines (SVG overlay) ─────────────────────────────────
+const lineSvg = document.getElementById('lineSvg');
+const activeTweetLines = []; // { card, nodeStateIdx, line, rect, rectFrame }
+
+function addTweetLine(card, n) {
+  const nodeStateIdx = nodeState.findIndex(ns => ns.tw === n.tw);
+  if (nodeStateIdx < 0) return; // CORP nodes not in orbit — skip
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('stroke', n.cat.color);
+  line.setAttribute('stroke-width', '1');
+  line.setAttribute('stroke-dasharray', '4,7');
+  line.setAttribute('opacity', '0');
+  line.style.transition = 'opacity 0.5s';
+  lineSvg.appendChild(line);
+  // Fade in after paint
+  requestAnimationFrame(() => requestAnimationFrame(() => line.setAttribute('opacity', '0.35')));
+  activeTweetLines.push({ card, nodeStateIdx, line, rect: null, rectFrame: -999 });
+}
+
+function removeTweetLine(card) {
+  const idx = activeTweetLines.findIndex(e => e.card === card);
+  if (idx < 0) return;
+  const [entry] = activeTweetLines.splice(idx, 1);
+  entry.line.setAttribute('opacity', '0');
+  setTimeout(() => entry.line.remove(), 500);
+}
+
+function updateTweetLinePositions() {
+  // Prune stale entries
+  for (let i = activeTweetLines.length - 1; i >= 0; i--) {
+    if (!document.body.contains(activeTweetLines[i].card)) {
+      activeTweetLines[i].line.remove();
+      activeTweetLines.splice(i, 1);
+    }
+  }
+  activeTweetLines.forEach(entry => {
+    // Refresh card rect every 10 frames to avoid layout thrashing
+    if (frameCount - entry.rectFrame >= 10) {
+      entry.rect = entry.card.getBoundingClientRect();
+      entry.rectFrame = frameCount;
+    }
+    if (!entry.rect) return;
+    const ns = nodeState[entry.nodeStateIdx];
+    if (!ns) return;
+    entry.line.setAttribute('x1', entry.rect.right);
+    entry.line.setAttribute('y1', entry.rect.top + entry.rect.height / 2);
+    entry.line.setAttribute('x2', ns.x);
+    entry.line.setAttribute('y2', ns.y);
   });
 }
 
