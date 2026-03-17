@@ -187,7 +187,7 @@ const nodes = [
   { name:'Kate Rouch',             org:'OpenAI',              role:'CMO, OpenAI',                                                  cat:MEDIA,  tw:'kate_rouch' },
   { name:'Joe Rogan',              org:'The Joe Rogan Experience', role:'Podcast Host',                                           cat:MEDIA,  tw:'joerogan' },
   { name:'Gary Vaynerchuk',        org:'VaynerMedia',         role:'Entrepreneur & Investor',                                     cat:MEDIA,  tw:'garyvee' },
-  { name:'Degenerate News',        org:'Crypto Media',        role:'Crypto News & Commentary',                                    cat:MEDIA,  tw:'DegenerateNews' },
+  { name:'Degenerate News',        org:'Crypto Media',        role:'Crypto News & Commentary',                                    cat:CORP,   tw:'DegenerateNews' },
   { name:'Arav Srinivas',          org:'Perplexity AI',       role:'CEO, Perplexity AI',                                          cat:MEDIA,  tw:'AravSrinivas' },
   // Companies (ring 3)
   { name:'The Block',              org:'Crypto Media',        role:'Crypto News Publication',                                     cat:CORP,   tw:'TheBlockCo' },
@@ -198,6 +198,11 @@ const nodes = [
   { name:'Binance',                org:'Binance Exchange',    role:'World\'s Largest Crypto Exchange',                            cat:CORP,   tw:'binance' },
   { name:'McDonald\'s',            org:'McDonald\'s Corp.',   role:'Global Fast Food Brand',                                      cat:CORP,   tw:'McDonalds' },
   { name:'a16z Crypto',            org:'Andreessen Horowitz', role:'Leading Crypto Venture Fund',                                 cat:CORP,   tw:'a16zcrypto' },
+  { name:'Arkham',                 org:'Arkham Intelligence', role:'On-Chain Analytics Platform',                                 cat:CORP,   tw:'arkham' },
+  { name:'Bitwise',                org:'Bitwise Asset Mgmt',  role:'Crypto Asset Manager',                                        cat:CORP,   tw:'BitwiseInvest' },
+  { name:'Cardano',                org:'Cardano Foundation',  role:'Cardano Blockchain',                                          cat:CORP,   tw:'Cardano' },
+  { name:'MoneyGram',              org:'MoneyGram',           role:'Global Payment Network',                                      cat:CORP,   tw:'MoneyGram' },
+  { name:'Kraken',                 org:'Kraken Exchange',     role:'Major Crypto Exchange',                                       cat:CORP,   tw:'krakenfx' },
 ];
 
 // Special index for CoinDesk center node (not in orbit, but shows in ticker)
@@ -673,6 +678,13 @@ function buildTickCard(n, tweet) {
       avatar.className = 'tick-avatar';
       avatar.crossOrigin = 'anonymous';
       avatar.alt = '';
+      avatar.onerror = () => {
+        const fb = document.createElement('div');
+        fb.className = 'tick-avatar-fb';
+        fb.style.background = n.cat.color;
+        fb.textContent = name[0] || '?';
+        avatar.replaceWith(fb);
+      };
       avatar.src = src;
     } else {
       avatar = document.createElement('div');
@@ -784,16 +796,15 @@ requestAnimationFrame(frame);
 loadAllImages();
 
 fetchTweets().then(() => {
-  if (tweetQueue.length === 0) return;
-
-  // Seed ticker immediately with the most recent tweet (last in oldest→newest queue)
-  const seedIdx  = tweetQueue[tweetQueue.length - 1];
-  const isCD     = seedIdx === COINDESK_IDX;
-  const seedNode = isCD ? CD_NODE : nodeState[seedIdx];
-  const seedTweet= tweetCache[isCD ? 'coindesk' : seedNode?.tw?.toLowerCase()];
-  if (seedNode && seedTweet) showTickerCard(seedNode, seedTweet);
-
-  setInterval(cycleTickerTweets, CYCLE_INTERVAL);
+  // Seed ticker immediately with the most recent tweet (if any within window)
+  if (tweetQueue.length > 0) {
+    const seedIdx  = tweetQueue[tweetQueue.length - 1];
+    const isCD     = seedIdx === COINDESK_IDX;
+    const seedNode = isCD ? CD_NODE : nodeState[seedIdx];
+    const seedTweet= tweetCache[isCD ? 'coindesk' : seedNode?.tw?.toLowerCase()];
+    if (seedNode && seedTweet) showTickerCard(seedNode, seedTweet);
+  }
+  setInterval(cycleTickerTweets, CYCLE_INTERVAL); // always start, even if queue empty on boot
 });
 
 setInterval(fetchTweets, FETCH_INTERVAL);
