@@ -585,6 +585,16 @@ canvas.addEventListener('mousemove', e => {
   }
 });
 canvas.addEventListener('mouseleave', () => { hoveredIdx=-1; tip.style.opacity='0'; });
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  nodeState.forEach(n => {
+    const dx = mx - n.x, dy = my - n.y;
+    if (Math.sqrt(dx*dx + dy*dy) < n.radius*1.8 && n.tw) {
+      window.open(`https://x.com/${n.tw}`, '_blank', 'noopener');
+    }
+  });
+});
 window.addEventListener('resize', resize);
 
 // ── Tweet system ──────────────────────────────────────────────────────────────
@@ -812,7 +822,7 @@ function addTweetLine(card, n) {
   line.setAttribute('opacity', '0');
   line.style.transition = 'opacity 0.5s';
   lineSvg.appendChild(line);
-  requestAnimationFrame(() => requestAnimationFrame(() => line.setAttribute('opacity', '0.35')));
+  requestAnimationFrame(() => requestAnimationFrame(() => line.setAttribute('opacity', '0.65')));
 
   const nodeStateIdx = nodeState.findIndex(ns => ns.tw === n.tw);
   if (nodeStateIdx >= 0) {
