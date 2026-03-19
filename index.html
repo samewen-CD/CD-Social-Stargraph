@@ -1109,6 +1109,7 @@ function buildDeckGrid() {
 
   // Collect all tweets from tweetCache with node metadata
   const entries = [];
+  const now = Date.now();
   allNodes.forEach(n => {
     const handle = n.tw?.toLowerCase();
     if (!handle) return;
@@ -1116,6 +1117,7 @@ function buildDeckGrid() {
     if (!tweet) return;
     const created = new Date(tweet.created);
     if (isNaN(created.getTime())) return;
+    if (now - created.getTime() > MAX_TWEET_AGE) return; // skip anything older than 3h
     entries.push({ n, tweet, created });
   });
 
@@ -1123,7 +1125,8 @@ function buildDeckGrid() {
   const cdTweet = tweetCache['coindesk'];
   if (cdTweet) {
     const created = new Date(cdTweet.created);
-    if (!isNaN(created.getTime())) entries.push({ n: CD_NODE, tweet: cdTweet, created });
+    if (!isNaN(created.getTime()) && now - created.getTime() <= MAX_TWEET_AGE)
+      entries.push({ n: CD_NODE, tweet: cdTweet, created });
   }
 
   // Sort most-recent first → upper-left, oldest last → lower-right
