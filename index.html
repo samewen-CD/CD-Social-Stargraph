@@ -119,6 +119,85 @@
     }
     @keyframes newPulse{0%,100%{opacity:1}50%{opacity:0.35}}
     .tw-card.is-new{animation:newPulse 2s ease-in-out infinite}
+
+    /* ── View toggle button ───────────────────────────────────────────────── */
+    #viewToggle{
+      position:fixed;top:18px;right:184px;z-index:200;
+      background:rgba(8,16,42,0.92);
+      border:1px solid rgba(240,165,0,0.45);border-radius:6px;
+      padding:6px 13px;color:#f0a500;
+      font-size:10px;font-family:'Segoe UI',Arial,sans-serif;
+      font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+      cursor:pointer;transition:background 0.2s,border-color 0.2s,color 0.2s;
+      white-space:nowrap;
+    }
+    #viewToggle:hover{background:rgba(240,165,0,0.14);border-color:rgba(240,165,0,0.85)}
+
+    /* ── TweetDeck / Feed view ────────────────────────────────────────────── */
+    #deck-view{
+      display:none;position:fixed;inset:0;background:#050a1a;
+      overflow-y:auto;z-index:150;padding:56px 18px 20px;
+    }
+    #deck-header{
+      position:fixed;top:0;left:0;right:0;height:48px;
+      background:rgba(5,10,26,0.97);
+      border-bottom:1px solid rgba(240,165,0,0.18);
+      display:flex;align-items:center;padding:0 20px;
+      z-index:160;gap:14px;
+    }
+    #deck-title{
+      color:#f0a500;font-size:11px;font-weight:700;
+      letter-spacing:2px;text-transform:uppercase;flex:1;
+    }
+    #deck-count{color:rgba(180,200,255,0.38);font-size:11px}
+    #deck-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(272px,1fr));
+      gap:9px;max-width:1640px;margin:0 auto;
+    }
+    .dk-card{
+      background:rgba(8,16,42,0.92);
+      border:1px solid rgba(255,255,255,0.07);
+      border-radius:8px;padding:11px 12px;
+      border-left-width:3px;border-left-style:solid;
+      cursor:pointer;transition:background 0.15s;
+      display:flex;gap:10px;align-items:flex-start;
+    }
+    .dk-card:hover{background:rgba(15,28,62,0.97)}
+    .dk-av{
+      width:36px;height:36px;border-radius:50%;
+      object-fit:cover;flex-shrink:0;
+    }
+    .dk-av-fb{
+      width:36px;height:36px;border-radius:50%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:14px;color:#050a1a;
+    }
+    .dk-body{flex:1;min-width:0}
+    .dk-meta{
+      display:flex;align-items:center;gap:5px;
+      margin-bottom:5px;flex-wrap:nowrap;
+    }
+    .dk-name{
+      font-size:12px;font-weight:700;color:#fff;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;
+    }
+    .dk-handle{font-size:10px;white-space:nowrap;flex-shrink:0}
+    .dk-time{
+      font-size:10px;color:rgba(180,200,255,0.38);
+      margin-left:auto;white-space:nowrap;
+    }
+    .dk-text{font-size:12px;color:#b8cce0;line-height:1.45;word-break:break-word}
+    .dk-new{
+      font-size:9px;font-weight:800;letter-spacing:1px;
+      color:#050a1a;background:#f0a500;
+      padding:1px 5px;border-radius:3px;flex-shrink:0;
+    }
+    .dk-cat{
+      font-size:8px;font-weight:700;letter-spacing:1px;
+      padding:1px 5px;border-radius:3px;flex-shrink:0;
+      opacity:0.75;
+    }
   </style>
 </head>
 <body>
@@ -141,6 +220,17 @@
 <div id="loading">Loading photos…</div>
 <div id="company-panel"></div>
 <div id="tweet-panel"></div>
+
+<button id="viewToggle" onclick="toggleView()">☰ FEED VIEW</button>
+
+<div id="deck-view">
+  <div id="deck-header">
+    <span id="deck-title">⬛ CoinDesk Live Feed</span>
+    <span id="deck-count"></span>
+    <button onclick="toggleView()" style="background:rgba(240,165,0,0.1);border:1px solid rgba(240,165,0,0.4);border-radius:5px;padding:5px 12px;color:#f0a500;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;font-family:'Segoe UI',Arial,sans-serif;">✦ STAR GRAPH</button>
+  </div>
+  <div id="deck-grid"></div>
+</div>
 
 <script>
 const canvas = document.getElementById('c');
@@ -937,6 +1027,142 @@ function updateTweetLinePositions() {
     entry.line.setAttribute('x2', x2);
     entry.line.setAttribute('y2', y2);
   });
+}
+
+// ── TweetDeck / Feed toggle view ──────────────────────────────────────────────
+let deckMode = false;
+
+function buildDeckCard(n, tweet) {
+  try {
+    const name   = String(tweet.name   || n.name.replace('\n',' '));
+    const handle = String(tweet.handle || n.tw || '');
+    const text   = String(tweet.text   || '');
+    const age    = Date.now() - new Date(tweet.created).getTime();
+    const isNew  = !isNaN(age) && age < NEW_TWEET_AGE;
+
+    const card = document.createElement('div');
+    card.className = 'dk-card';
+    card.style.borderLeftColor = n.cat.color;
+    if (tweet.id && handle) {
+      card.addEventListener('click', () =>
+        window.open(`https://x.com/${handle}/status/${tweet.id}`, '_blank', 'noopener'));
+    }
+
+    // Avatar
+    let av;
+    const src = tweet.avatar ? String(tweet.avatar) : '';
+    if (src && /^https?:\/\//.test(src)) {
+      av = document.createElement('img');
+      av.className = 'dk-av'; av.alt = '';
+      av.onerror = () => {
+        const fb = document.createElement('div');
+        fb.className = 'dk-av-fb'; fb.style.background = n.cat.color;
+        fb.textContent = name[0] || '?'; av.replaceWith(fb);
+      };
+      av.src = src;
+    } else {
+      av = document.createElement('div');
+      av.className = 'dk-av-fb'; av.style.background = n.cat.color;
+      av.textContent = name[0] || '?';
+    }
+
+    const body = document.createElement('div');
+    body.className = 'dk-body';
+
+    const meta = document.createElement('div');
+    meta.className = 'dk-meta';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'dk-name'; nameEl.textContent = name;
+
+    const handleEl = document.createElement('span');
+    handleEl.className = 'dk-handle'; handleEl.style.color = n.cat.color;
+    handleEl.textContent = `@${handle}`;
+
+    if (isNew) {
+      const badge = document.createElement('span');
+      badge.className = 'dk-new'; badge.textContent = 'NEW';
+      meta.appendChild(badge);
+    }
+
+    const timeEl = document.createElement('span');
+    timeEl.className = 'dk-time'; timeEl.textContent = timeAgo(tweet.created);
+
+    meta.appendChild(nameEl); meta.appendChild(handleEl); meta.appendChild(timeEl);
+
+    const textEl = document.createElement('div');
+    textEl.className = 'dk-text'; textEl.textContent = text;
+
+    body.appendChild(meta); body.appendChild(textEl);
+    card.appendChild(av); card.appendChild(body);
+    return card;
+  } catch(e) {
+    console.warn('[buildDeckCard]', e);
+    return document.createElement('div');
+  }
+}
+
+function buildDeckGrid() {
+  const grid    = document.getElementById('deck-grid');
+  const countEl = document.getElementById('deck-count');
+  grid.innerHTML = '';
+
+  // Collect all tweets from tweetCache with node metadata
+  const entries = [];
+  allNodes.forEach(n => {
+    const handle = n.tw?.toLowerCase();
+    if (!handle) return;
+    const tweet = tweetCache[handle];
+    if (!tweet) return;
+    const created = new Date(tweet.created);
+    if (isNaN(created.getTime())) return;
+    entries.push({ n, tweet, created });
+  });
+
+  // Include CoinDesk center node
+  const cdTweet = tweetCache['coindesk'];
+  if (cdTweet) {
+    const created = new Date(cdTweet.created);
+    if (!isNaN(created.getTime())) entries.push({ n: CD_NODE, tweet: cdTweet, created });
+  }
+
+  // Sort most-recent first → upper-left, oldest last → lower-right
+  entries.sort((a, b) => b.created - a.created);
+
+  countEl.textContent = `${entries.length} tweet${entries.length !== 1 ? 's' : ''}`;
+
+  entries.forEach(({ n, tweet }) => {
+    const card = buildDeckCard(n, tweet);
+    if (card) grid.appendChild(card);
+  });
+}
+
+// IDs to hide/show when switching views
+const STAR_IDS = ['c','lineSvg','centerLogo','legend','tweet-panel','company-panel','loading'];
+
+function toggleView() {
+  deckMode = !deckMode;
+  const btn  = document.getElementById('viewToggle');
+  const deck = document.getElementById('deck-view');
+
+  if (deckMode) {
+    // Switch to feed/deck view
+    STAR_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.visibility = 'hidden';
+    });
+    deck.style.display = 'block';
+    buildDeckGrid();
+    btn.textContent = '✦ STAR GRAPH';
+  } else {
+    // Switch back to star graph
+    deck.style.display = 'none';
+    STAR_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.visibility = '';
+    });
+    btn.textContent = '☰ FEED VIEW';
+  }
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
