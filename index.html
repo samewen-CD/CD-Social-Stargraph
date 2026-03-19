@@ -724,7 +724,8 @@ const NEW_TWEET_AGE  = 30 * 60 * 1000;
 const CYCLE_INTERVAL = 10_000;
 const MAX_STACK      = 4;
 
-const tweetCache = {};
+const tweetCache    = {};    // handle → most recent tweet  (star graph / tweet stack)
+const tweetCacheAll = {};    // handle → array of all tweets in window (feed view)
 let   tweetQueue  = [];
 const stackCards  = [];
 
@@ -743,8 +744,16 @@ async function fetchTweets() {
       return res.json();
     }));
     const data = Object.assign({}, ...results);
-    Object.assign(tweetCache, data);
-    console.log(`[tweets] loaded ${Object.keys(data).length} tweets across ${batches.length} batches`);
+    // data is now { handle: [tweet, ...] } — split into two caches
+    let tweetCount = 0;
+    Object.entries(data).forEach(([handle, tweets]) => {
+      if (Array.isArray(tweets) && tweets.length > 0) {
+        tweetCache[handle]    = tweets[0];   // most recent → star graph
+        tweetCacheAll[handle] = tweets;      // all → feed view
+        tweetCount += tweets.length;
+      }
+    });
+    console.log(`[tweets] loaded ${tweetCount} total tweets (${Object.keys(data).length} handles) across ${batches.length} batches`);
     rebuildQueue();
   } catch(e) {
     console.warn('[tweets] fetch failed:', e);
@@ -1107,27 +1116,28 @@ function buildDeckGrid() {
   const countEl = document.getElementById('deck-count');
   grid.innerHTML = '';
 
-  // Collect all tweets from tweetCache with node metadata
+  // Collect ALL tweets from the 3h window across all nodes
   const entries = [];
   const now = Date.now();
   allNodes.forEach(n => {
     const handle = n.tw?.toLowerCase();
     if (!handle) return;
-    const tweet = tweetCache[handle];
-    if (!tweet) return;
-    const created = new Date(tweet.created);
-    if (isNaN(created.getTime())) return;
-    if (now - created.getTime() > MAX_TWEET_AGE) return; // skip anything older than 3h
-    entries.push({ n, tweet, created });
+    const tweets = tweetCacheAll[handle] || [];
+    tweets.forEach(tweet => {
+      const created = new Date(tweet.created);
+      if (isNaN(created.getTime())) return;
+      if (now - created.getTime() > MAX_TWEET_AGE) return;
+      entries.push({ n, tweet, created });
+    });
   });
 
-  // Include CoinDesk center node
-  const cdTweet = tweetCache['coindesk'];
-  if (cdTweet) {
-    const created = new Date(cdTweet.created);
+  // Include CoinDesk center node (all tweets)
+  const cdTweets = tweetCacheAll['coindesk'] || [];
+  cdTweets.forEach(tweet => {
+    const created = new Date(tweet.created);
     if (!isNaN(created.getTime()) && now - created.getTime() <= MAX_TWEET_AGE)
-      entries.push({ n: CD_NODE, tweet: cdTweet, created });
-  }
+      entries.push({ n: CD_NODE, tweet, created });
+  });
 
   // Sort most-recent first → upper-left, oldest last → lower-right
   entries.sort((a, b) => b.created - a.created);
