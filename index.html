@@ -754,6 +754,7 @@ async function fetchTweets() {
     });
     console.log(`[tweets] loaded ${tweetCount} total tweets (${Object.keys(data).length} handles) across ${batches.length} batches`);
     rebuildQueue();
+    if (deckMode) buildDeckGrid();   // auto-refresh feed view if it's open
   } catch(e) {
     console.warn('[tweets] fetch failed:', e);
   }
