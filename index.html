@@ -22,7 +22,12 @@
 
     /* ── Legend ──────────────────────────────────────────────────────────── */
     #legend{position:absolute;top:18px;left:18px;display:flex;flex-direction:column;gap:7px}
-    .li{display:flex;align-items:center;gap:8px;font-size:11px;color:#99aacc}
+    .li{display:flex;align-items:center;gap:8px;font-size:11px;color:#99aacc;
+        cursor:pointer;border-radius:5px;padding:3px 6px;margin:-3px -6px;
+        transition:color 0.2s,background 0.2s;}
+    .li:hover{color:#ccdaf0;background:rgba(255,255,255,0.05)}
+    .li.active{color:#fff;background:rgba(255,255,255,0.09)}
+    .li.active .ld{box-shadow:0 0 7px 2px currentColor}
     .ld{width:11px;height:11px;border-radius:50%;flex-shrink:0}
 
     /* ── Loading ─────────────────────────────────────────────────────────── */
@@ -177,6 +182,7 @@ const nodes = [
   { name:'Dan Tapiero',            org:'10T Holdings',        role:'Founder, 10T Holdings',                                       cat:FIN,    tw:'DTAPCAP' },
   // Crypto Industry (ring 2)
   { name:'Brian Armstrong',        org:'Coinbase',            role:'CEO, Coinbase',                                                cat:CRYPTO, tw:'brian_armstrong' },
+  { name:'Emilie Choi',           org:'Coinbase',            role:'President & COO, Coinbase',                                    cat:CRYPTO, tw:'emiliemc' },
   { name:'Gracy Chen',             org:'Bitget',              role:'CEO, Bitget',                                                  cat:CRYPTO, tw:'GracyBitget' },
   { name:'Richard Teng',           org:'Binance',             role:'Co-CEO, Binance',                                             cat:CRYPTO, tw:'_RichardTeng' },
   { name:'Yi He',                  org:'Binance',             role:'Co-CEO, Binance',                                              cat:CRYPTO, tw:'heyibinance' },
@@ -208,6 +214,7 @@ const nodes = [
   { name:'Gary Vaynerchuk',        org:'VaynerMedia',         role:'Entrepreneur & Investor',                                     cat:MEDIA,  tw:'garyvee' },
   { name:'Degenerate News',        org:'Crypto Media',        role:'Crypto News & Commentary',                                    cat:CORP,   tw:'DegenerateNews' },
   { name:'Arav Srinivas',          org:'Perplexity AI',       role:'CEO, Perplexity AI',                                          cat:MEDIA,  tw:'AravSrinivas' },
+  { name:'Ash Crypto',             org:'Crypto Media',        role:'Crypto Influencer & Content Creator',                          cat:CORP,   tw:'AshCrypto' },
   // Companies (ring 3)
   { name:'The Block',              org:'Crypto Media',        role:'Crypto News Publication',                                     cat:CORP,   tw:'TheBlockCo' },
   { name:'Grayscale',              org:'Grayscale Investments',role:'Largest Crypto Asset Manager',                               cat:CORP,   tw:'Grayscale' },
@@ -431,7 +438,9 @@ function drawAllEdges() {
 
 // ── Node ──────────────────────────────────────────────────────────────────────
 function drawNode(n, idx) {
-  const hov   = hoveredIdx === idx;
+  const dimmed = activeCategory !== null && n.cat !== activeCategory;
+  ctx.globalAlpha = dimmed ? 0.15 : 1;
+  const hov   = !dimmed && hoveredIdx === idx;
   const pulse = 1 + 0.05*Math.sin(time*0.003 + n.baseAngle);
   const r     = n.radius * (hov ? 1.4 : pulse);
   const key   = n.name.replace('\n',' ');
@@ -490,6 +499,7 @@ function drawNode(n, idx) {
   if (hov) ctx.shadowBlur = 8;
   ctx.fillText(n.org, n.x, orgY);
   ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 // ── Background offscreen cache ────────────────────────────────────────────────
@@ -585,6 +595,25 @@ canvas.addEventListener('mousemove', e => {
   }
 });
 canvas.addEventListener('mouseleave', () => { hoveredIdx=-1; tip.style.opacity='0'; });
+
+// ── Category filter ────────────────────────────────────────────────────────────
+let activeCategory = null;
+const catMap = [GOVT, CRYPTO, FIN, MEDIA, CORP];
+document.querySelectorAll('.li').forEach((el, i) => {
+  el.addEventListener('click', () => {
+    const cat = catMap[i];
+    if (activeCategory === cat) {
+      activeCategory = null;
+      el.classList.remove('active');
+    } else {
+      document.querySelectorAll('.li').forEach(e => e.classList.remove('active'));
+      activeCategory = cat;
+      el.classList.add('active');
+    }
+    filterTweetStack(activeCategory);
+  });
+});
+
 canvas.addEventListener('click', e => {
   const rect = canvas.getBoundingClientRect();
   const mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -766,6 +795,8 @@ function cycleTweetStack() {
     const isCD = (idx === COINDESK_IDX);
     const n    = isCD ? CD_NODE : allNodes[idx];
     if (!n) return;
+    // Skip if category filter active and node doesn't match
+    if (activeCategory !== null && n.cat !== activeCategory) return;
     const handle = isCD ? 'coindesk' : n.tw?.toLowerCase();
     const tweet  = tweetCache[handle];
     if (!tweet) return;
@@ -775,6 +806,31 @@ function cycleTweetStack() {
   } catch(e) {
     console.warn('[cycleTweetStack]', e);
   }
+}
+
+function filterTweetStack(cat) {
+  // Clear existing stack and lines
+  [...stackCards].forEach(card => { removeTweetLine(card); card.remove(); });
+  stackCards.length = 0;
+
+  if (!cat) return; // no filter — normal cycling will repopulate
+
+  // Find most recent tweets from this category within the time window
+  const now = Date.now();
+  const catNodes = allNodes.filter(n => n.cat === cat);
+  const recent = catNodes
+    .map(n => {
+      const tweet = tweetCache[n.tw?.toLowerCase()];
+      if (!tweet) return null;
+      const age = now - new Date(tweet.created).getTime();
+      if (isNaN(age) || age >= MAX_TWEET_AGE) return null;
+      return { n, tweet, age };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.age - a.age) // oldest first so newest ends up at bottom
+    .slice(0, MAX_STACK);
+
+  recent.reverse().forEach(({ n, tweet }) => showTweetInStack(n, tweet));
 }
 
 // ── Company panel ──────────────────────────────────────────────────────────────
